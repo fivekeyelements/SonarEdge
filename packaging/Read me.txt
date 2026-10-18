@@ -17,12 +17,13 @@ Use Settings > App version to change modes at any time.
 START WITH WINDOWS
 Open Settings > App version, enable Start with Windows, and Save changes.
 Sonar Edge starts your selected Desktop or iCUE version after Windows sign-in.
-It uses one native shortcut in your Windows Startup folder with the app's
-working directory. Enabling startup migrates the older registry entry.
+It uses one per-user Windows logon task with the app's working directory,
+avoiding Explorer's delayed Startup folder launches. Enabling startup migrates
+older registry and Startup folder entries.
 Installed copies start directly from LocalAppData\Programs\SonarEdge.
 Portable copies can keep a managed startup copy until you install the app.
-No administrator access, scheduled task, script, or PowerShell process is
-used for startup. The startup setting also appears in the installer.
+No administrator access, password, script, or PowerShell process is needed.
+The startup setting also appears in the installer.
 Turn the checkbox off and save to remove only Sonar Edge's startup entry.
 SteelSeries GG and iCUE still need their own startup settings enabled if used;
 Sonar Edge reconnects as the audio apps become available. MusicBee controls

@@ -17,6 +17,10 @@ import threading
 APP_NAME = 'Sonar Edge'
 from app_version import VERSION
 ASSETS = Path(__file__).resolve().parent
+# Installer maintenance never opens the GUI, audio bridge, tray or widget server.
+if __name__ == '__main__' and '--configure-startup' in sys.argv:
+    from scheduled_startup import installer_cli
+    raise SystemExit(installer_cli())
 DATA_DIR = Path(os.environ.get('SONAR_EDGE_DATA_DIR') or (Path(os.environ.get('LOCALAPPDATA', str(Path.home()))) / 'SonarEdge'))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 os.environ['SONAR_EDGE_DATA_DIR'] = str(DATA_DIR)

@@ -7,6 +7,23 @@ from unittest.mock import patch
 import uuid
 import winreg
 import windows_startup as startup
+from windows_shortcuts import write_shortcut
+
+
+class FakeScheduler:
+    sid='S-1-5-21-1234'
+    def __init__(self,folder):
+        self.marker=folder/'startup-task-name.txt'
+        self.state=None
+    def query(self):return self.state
+    def enable(self,target):
+        target=Path(target).resolve()
+        self.state={'target':str(target),'arguments':'--startup','directory':str(target.parent),
+                    'enabled':True,'sid':self.sid,'logon':'InteractiveToken','runLevel':'LeastPrivilege','delay':'PT5S'}
+        self.marker.write_text('isolated task')
+    def delete(self):
+        self.state=None
+        self.marker.unlink(missing_ok=True)
 
 
 class StartupTests(unittest.TestCase):
@@ -26,6 +43,9 @@ class StartupTests(unittest.TestCase):
         self.folder_patch.start()
         self.install_patch=patch.object(startup.installation,'registered_executable',return_value=None)
         self.install_patch.start()
+        self.scheduler=FakeScheduler(self.folder)
+        self.task_patch=patch.object(startup,'ScheduledStartup',return_value=self.scheduler)
+        self.task_patch.start()
         self.manager=startup.WindowsStartup(self.package,'1.7.0',executable=self.executable,
                                             install_root=self.folder/'installed',available=True)
 
@@ -35,6 +55,7 @@ class StartupTests(unittest.TestCase):
         self.key_patch.stop()
         self.folder_patch.stop()
         self.install_patch.stop()
+        self.task_patch.stop()
         self.temp.cleanup()
 
     def test_enable_installs_clean_copy_and_registers_direct_exe(self):
@@ -43,8 +64,9 @@ class StartupTests(unittest.TestCase):
         target=self.folder/'installed/1.7.0/SonarEdge.exe'
         self.assertEqual(target.read_bytes(),b'MZ-test-app')
         self.assertEqual(self.manager.registered_command(),f'"{target.resolve()}" --startup')
-        link=startup.read_shortcut(self.manager.shortcut)
-        self.assertEqual(link,{'target':str(target.resolve()),'arguments':'--startup','directory':str(target.parent.resolve())})
+        self.assertEqual(self.scheduler.query()['target'],str(target.resolve()))
+        self.assertFalse(self.manager.shortcut.exists())
+        self.assertEqual(self.manager.info()['method'],'logon-task')
         with self.assertRaises(FileNotFoundError):winreg.OpenKey(winreg.HKEY_CURRENT_USER,self.key)
         self.assertTrue((target.parent/'Sonar Edge XL.icuewidget').exists())
         self.assertFalse((target.parent/'preferences.json').exists())
@@ -96,16 +118,32 @@ class StartupTests(unittest.TestCase):
             self.assertEqual(self.manager.registered_command(),before)
         self.install_patch.start()
 
-    def test_legacy_run_entry_migrates_to_one_native_startup_shortcut(self):
+    def test_legacy_run_entry_migrates_to_one_logon_task(self):
         with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER,self.key,0,winreg.KEY_SET_VALUE) as key:
             winreg.SetValueEx(key,startup.VALUE_NAME,0,winreg.REG_SZ,f'"{self.executable}" --startup')
             winreg.SetValueEx(key,'Another app',0,winreg.REG_SZ,'untouched')
         self.manager.refresh_if_enabled()
-        self.assertTrue(self.manager.shortcut.is_file())
-        self.assertEqual(self.manager.info()['method'],'startup-folder')
+        self.assertIsNotNone(self.scheduler.query())
+        self.assertFalse(self.manager.shortcut.exists())
+        self.assertEqual(self.manager.info()['method'],'logon-task')
         with winreg.OpenKey(winreg.HKEY_CURRENT_USER,self.key) as key:
             with self.assertRaises(FileNotFoundError):winreg.QueryValueEx(key,startup.VALUE_NAME)
             self.assertEqual(winreg.QueryValueEx(key,'Another app')[0],'untouched')
+
+    def test_startup_folder_migrates_only_after_task_is_confirmed(self):
+        write_shortcut(self.manager.shortcut,self.executable,'--startup')
+        with patch.object(self.scheduler,'enable',side_effect=OSError('Registration failed')):
+            with self.assertRaises(OSError):self.manager.set_enabled(True)
+        self.assertTrue(self.manager.shortcut.exists())
+        self.manager.refresh_if_enabled()
+        self.assertFalse(self.manager.shortcut.exists())
+        self.assertTrue(self.manager.info()['enabled'])
+
+    def test_externally_disabled_task_stays_disabled_on_app_launch(self):
+        self.manager.set_enabled(True)
+        self.scheduler.state['enabled']=False
+        self.manager.refresh_if_enabled()
+        self.assertFalse(self.manager.info()['enabled'])
 
 
 if __name__=='__main__':unittest.main(verbosity=2)

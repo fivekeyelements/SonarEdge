@@ -1,4 +1,4 @@
-"""Per-user Windows Startup shortcut; starts the EXE with its working directory."""
+"""Per-user logon startup, with migration from older shortcut/registry entries."""
 import hashlib
 import os
 from pathlib import Path
@@ -8,7 +8,8 @@ import shutil
 import sys
 import winreg
 import installation
-from windows_shortcuts import startup_folder, read_shortcut, write_shortcut
+from windows_shortcuts import startup_folder, read_shortcut
+from scheduled_startup import ScheduledStartup
 
 RUN_KEY = r'Software\Microsoft\Windows\CurrentVersion\Run'
 VALUE_NAME = 'Sonar Edge'
@@ -26,8 +27,12 @@ class WindowsStartup:
         self.install_root = Path(install_root or (Path(os.environ['LOCALAPPDATA']) / 'Programs/SonarEdge/versions'))
         self.available = bool(getattr(sys, 'frozen', False)) if available is None else available
         self.shortcut = startup_folder() / 'Sonar Edge.lnk'
+        self.scheduler = ScheduledStartup()
 
     def registered_command(self):
+        task = self.scheduler.query()
+        if task and task['enabled'] and Path(task['target']).name.lower() == 'sonaredge.exe' and task['arguments'] == '--startup':
+            return f'"{task["target"]}" --startup'
         if self.shortcut.is_file():
             try:
                 link = read_shortcut(self.shortcut)
@@ -44,7 +49,7 @@ class WindowsStartup:
 
     def info(self):
         return {'available': self.available, 'enabled': bool(self.registered_command()),
-                'method':'startup-folder' if self.shortcut.is_file() else 'registry'}
+                'method':'logon-task'}
 
     @staticmethod
     def remove_legacy_entry():
@@ -90,18 +95,15 @@ class WindowsStartup:
             if not self.available:
                 raise ValueError('Use the packaged SonarEdge.exe to enable Windows startup')
             target = self.deploy()
-            command = f'"{target}" --startup'
-            if len(command) > 260:
-                raise ValueError('The Windows startup path is too long')
-            expected={'target':str(target),'arguments':'--startup','directory':str(target.parent)}
-            try:
-                current=read_shortcut(self.shortcut) if self.shortcut.is_file() else None
-            except OSError:
-                current=None
-            if current != expected:
-                write_shortcut(self.shortcut,target,'--startup')
+            expected={'target':str(target.resolve()),'arguments':'--startup','directory':str(target.parent.resolve()),
+                      'enabled':True,'sid':self.scheduler.sid,'logon':'InteractiveToken','runLevel':'LeastPrivilege','delay':'PT5S'}
+            if self.scheduler.query() != expected or not self.scheduler.marker.is_file():
+                self.scheduler.enable(target)
+            # Keep a working legacy entry until Windows confirms its replacement.
+            self.shortcut.unlink(missing_ok=True)
             self.remove_legacy_entry()
         else:
+            self.scheduler.delete()
             self.shortcut.unlink(missing_ok=True)
             self.remove_legacy_entry()
         return self.info()
