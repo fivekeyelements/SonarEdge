@@ -35,7 +35,9 @@ if sys.stderr is None:
 if __name__ == '__main__':
     # Configure before dependencies can install a root handler. Record the actual
     # Windows invocation time even if a dependency fails before main() starts.
-    logging.basicConfig(filename=DATA_DIR / 'sonar-edge.log', level=logging.INFO,
+    from logging.handlers import RotatingFileHandler
+    logging.basicConfig(handlers=[RotatingFileHandler(DATA_DIR / 'sonar-edge.log',
+                        maxBytes=2*1024*1024,backupCount=1,encoding='utf-8')], level=logging.INFO,
                         format='%(asctime)s %(levelname)s %(message)s')
     logging.info('Launch requested; startup=%s executable=%s', '--startup' in sys.argv, sys.executable)
 
