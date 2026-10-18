@@ -45,6 +45,7 @@ class AppVersionTests(unittest.TestCase):
                 args,kwargs=launch.call_args
                 self.assertEqual(args[0],['C:/Sonar Edge/SonarEdge.exe',argument])
                 self.assertNotIn('SONAR_EDGE_WIDGET_PORT',kwargs['env'])
+                self.assertEqual(kwargs['env']['PYINSTALLER_RESET_ENVIRONMENT'],'1')
                 self.assertFalse(kwargs.get('shell',False))
 
     def test_widget_actions_only_open_bundled_files(self):

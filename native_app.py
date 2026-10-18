@@ -280,6 +280,7 @@ def run_widget_companion(bridge):
     def choose_version(sender, event):
         environment = os.environ.copy()
         environment.pop('SONAR_EDGE_WIDGET_PORT', None)
+        environment['PYINSTALLER_RESET_ENVIRONMENT'] = '1'
         subprocess.Popen([*bridge.app_versions.command, '--choose'], env=environment,
                          creationflags=subprocess.CREATE_NO_WINDOW)
     versions.Click += choose_version

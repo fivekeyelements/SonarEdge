@@ -2,6 +2,7 @@
 import copy
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -160,8 +161,13 @@ class AppUpdates:
             # Recheck the finalized bytes immediately before launching the installer.
             if hashlib.sha256(target.read_bytes()).hexdigest() != candidate['sha256']:
                 raise ValueError('The downloaded installer changed before it could start')
+            # The installer outlives this frozen process and reopens the same EXE.
+            # Its new app must extract the new release, rather than reuse our files.
+            environment = os.environ.copy()
+            environment.pop('SONAR_EDGE_WIDGET_PORT', None)
+            environment['PYINSTALLER_RESET_ENVIRONMENT'] = '1'
             self.launcher([str(target), '/SILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/UPDATE=1', '/LAUNCH=1'],
-                          cwd=folder, creationflags=subprocess.CREATE_NO_WINDOW)
+                          cwd=folder, env=environment, creationflags=subprocess.CREATE_NO_WINDOW)
             self._set(status='installing', message='Installing the update. Sonar Edge will close and reopen.', progress=100)
         except InterruptedError as error:
             self._set(status='available', message=str(error), progress=0)

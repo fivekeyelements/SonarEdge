@@ -69,6 +69,7 @@ class UpdateTests(unittest.TestCase):
         self.assertEqual(Path(command[0]).read_bytes(),body)
         self.assertIn('/UPDATE=1',command);self.assertIn('/LAUNCH=1',command)
         self.assertFalse(self.launcher.call_args.kwargs.get('shell',False))
+        self.assertEqual(self.launcher.call_args.kwargs['env']['PYINSTALLER_RESET_ENVIRONMENT'],'1')
         self.assertEqual(list((self.root/'updates').glob('*.part')),[])
 
     def test_corrupt_truncated_oversize_and_non_executable_downloads_never_run(self):

@@ -65,6 +65,7 @@ class AppVersions:
                 raise ValueError('Choose Desktop or iCUE iframe')
             environment = os.environ.copy()
             environment.pop('SONAR_EDGE_WIDGET_PORT', None)
+            environment['PYINSTALLER_RESET_ENVIRONMENT'] = '1'
             subprocess.Popen([*self.command, '--widget' if mode == 'iframe' else '--desktop'],
                              cwd=self.package_dir, env=environment,
                              creationflags=subprocess.CREATE_NO_WINDOW)
