@@ -10,6 +10,7 @@ import subprocess
 import sys
 from tempfile import TemporaryDirectory
 import xml.etree.ElementTree as ET
+from task_scheduler_xml import task_xml
 
 NAMESPACE='http://schemas.microsoft.com/windows/2004/02/mit/task'
 ET.register_namespace('',NAMESPACE)
@@ -28,13 +29,6 @@ def current_sid():
     return sid
 
 
-def decode_xml(body):
-    if body.startswith((b'\xff\xfe',b'\xfe\xff')) or body[1:2]==b'\0':
-        return body.decode('utf-16')
-    try:return body.decode('utf-8-sig')
-    except UnicodeDecodeError:return body.decode('oem')
-
-
 class ScheduledStartup:
     def __init__(self,profile='SonarEdge',sid=None,marker=None):
         if not re.fullmatch(r'[A-Za-z0-9]{1,64}',profile):
@@ -49,9 +43,9 @@ class ScheduledStartup:
             timeout=15,creationflags=subprocess.CREATE_NO_WINDOW)
 
     def query(self):
-        result=self._run('/Query','/TN',self.name,'/XML')
-        if result.returncode:return None
-        root=ET.fromstring(decode_xml(result.stdout))
+        document=task_xml(self.name)
+        if document is None:return None
+        root=ET.fromstring(document)
         for item in root.iter():item.tag=item.tag.rsplit('}',1)[-1]
         if root.tag!='Task':raise OSError('Windows returned an invalid startup task.')
         principal=root.find('Principals/Principal')
@@ -104,7 +98,9 @@ class ScheduledStartup:
         state=self.query()
         expected={'target':str(executable),'arguments':'--startup','directory':str(executable.parent),
                   'enabled':enabled,'sid':self.sid,'logon':'InteractiveToken','runLevel':'LeastPrivilege','delay':'PT5S'}
-        if state!=expected:raise OSError('Windows did not confirm the startup task. Try enabling startup again.')
+        if state!=expected:
+            logging.error('Startup task verification mismatch: actual=%r expected=%r',state,expected)
+            raise OSError('Windows did not confirm the startup task. Try enabling startup again.')
         return state
 
     def delete(self):
