@@ -16,7 +16,7 @@ Choose Desktop or iCUE in **Settings → App version**. Import the included
 - MusicBee controls, artwork, progress, seeking, and player volume with the included helper
 - Other music apps through Windows media controls
 - Custom backgrounds, album colors, optional animated blur, readable text, and configurable buttons
-- Minimize the desktop window to the system tray; reopen or exit from its tray icon
+- Runs in the system tray, with no taskbar button even while the desktop window is open
 - User-initiated GitHub update checks and verified installer downloads
 
 SteelSeries GG/Sonar and your media player must be installed separately. iCUE

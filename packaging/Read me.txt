@@ -68,8 +68,9 @@ Use F11 to toggle fullscreen and Escape to leave it.
 The Edge must be available as an extended Windows display for a desktop app.
 
 SYSTEM TRAY
-Minimize or close the desktop window to hide it from the taskbar while the
-iCUE widget and audio controls keep running. The bottom gear opens Settings;
+Sonar Edge uses one system tray icon and never adds a taskbar button, even
+while its desktop window is open. Minimize or close the window to hide it while
+the iCUE widget and audio controls keep running. The bottom gear opens Settings;
 Window & display contains fullscreen, display placement and Minimize to tray. Double-click the
 Sonar Edge tray icon or choose Open Sonar Edge from its menu to restore it.
 Choose Exit Sonar Edge from the tray menu to quit the whole app.

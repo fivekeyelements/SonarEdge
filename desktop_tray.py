@@ -41,6 +41,9 @@ class DesktopTray:
             self.tray.ContextMenuStrip = self.menu
             self.tray.DoubleClick += self.restore
             self.tray.Visible = True
+            # The tray is the app's permanent entry point, including while the
+            # desktop window is open. Set this before the first window Show.
+            form.ShowInTaskbar = False
             # Install the hide handler only after a usable tray icon exists.
             form.Resize += self.on_resize
             form.FormClosed += self.dispose

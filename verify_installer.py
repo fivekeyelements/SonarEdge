@@ -54,16 +54,22 @@ def verify():
             assert json.loads((app/'installation.json').read_text('utf-8-sig'))['appId']=='SonarEdgeInstallTest'
             assert read_value(UNINSTALL_KEY,'DisplayVersion')==VERSION
             assert read_value(RUN_KEY,RUN_NAME)==f'"{app}\\SonarEdge.exe" --startup'
-            menu=Path(os.environ['APPDATA'])/'Microsoft/Windows/Start Menu/Programs/Sonar Edge Install Test'
-            assert {p.name for p in menu.glob('*.lnk')}=={'Sonar Edge.lnk'},'Fresh install created extra Start menu shortcuts'
+            programs=Path(os.environ['APPDATA'])/'Microsoft/Windows/Start Menu/Programs'
+            shortcut=programs/'Sonar Edge Install Test.lnk'
+            menu=programs/'Sonar Edge Install Test'
+            assert shortcut.is_file(),'Fresh install did not create the direct Start menu shortcut'
+            assert not menu.exists(),'Fresh install created an unnecessary Start menu folder'
             # Recreate the older installer's entries to exercise upgrade cleanup.
-            for name in LEGACY_MENU_LINKS:shutil.copy2(menu/'Sonar Edge.lnk',menu/name)
+            menu.mkdir()
+            for name in ('Sonar Edge.lnk',*LEGACY_MENU_LINKS):shutil.copy2(shortcut,menu/name)
+            shortcut.unlink()  # Upgrade must repair a missing Start menu entry.
             profile.mkdir()
             saved=profile/'preferences.json'
             saved.write_text('{"custom":"keep my layout"}','utf-8')
             with winreg.OpenKey(winreg.HKEY_CURRENT_USER,RUN_KEY,0,winreg.KEY_SET_VALUE) as key:winreg.DeleteValue(key,RUN_NAME)
-            run([*common,'/UPDATE=1',f'/LOG={location/"upgrade.log"}'])
-            assert {p.name for p in menu.glob('*.lnk')}=={'Sonar Edge.lnk'},'Upgrade left redundant Start menu shortcuts'
+            run([*common,'/UPDATE=1','/NOICONS',f'/LOG={location/"upgrade.log"}'])
+            assert shortcut.is_file(),'Upgrade did not repair the direct Start menu shortcut'
+            assert not menu.exists(),'Upgrade left redundant Start menu shortcuts'
             assert read_value(RUN_KEY,RUN_NAME) is None,'An update re-enabled disabled startup'
             assert saved.read_text('utf-8')=='{"custom":"keep my layout"}'
             # Enable through the installer, then verify uninstall removes its entry.
@@ -72,6 +78,7 @@ def verify():
             wait_removed(app)
             assert read_value(UNINSTALL_KEY,'UninstallString') is None
             assert read_value(RUN_KEY,RUN_NAME) is None
+            assert not shortcut.exists(),'Uninstall left the Start menu shortcut behind'
             assert saved.is_file(),'Default uninstall discarded saved settings'
             run(common)
             run([app/'unins000.exe','/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/PURGEDATA=1'])

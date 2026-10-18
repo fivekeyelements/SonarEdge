@@ -22,7 +22,7 @@ class Event:
 
 class TrayTests(unittest.TestCase):
     def setUp(self):
-        self.form = NS(WindowState='normal', IsDisposed=False, Resize=Event(), FormClosed=Event(), FormClosing=Event(),
+        self.form = NS(WindowState='normal', IsDisposed=False, ShowInTaskbar=True, Resize=Event(), FormClosed=Event(), FormClosing=Event(),
                        Hide=Mock(), Show=Mock(), BringToFront=Mock(), Activate=Mock())
         self.window = NS(native=self.form, destroy=Mock(side_effect=self.form.FormClosed.fire))
         self.icon = Mock()
@@ -52,6 +52,7 @@ class TrayTests(unittest.TestCase):
             self.assertEqual(self.form.WindowState, state)
             self.form.Show.assert_called()
             self.form.Activate.assert_called()
+            self.assertFalse(self.form.ShowInTaskbar)
 
     def test_open_menu_restores_and_exit_disposes_the_tray(self):
         self.tray.attach()
@@ -83,6 +84,7 @@ class TrayTests(unittest.TestCase):
         self.form.Hide.assert_not_called()
         self.assertFalse(self.notify.Visible)
         self.notify.Dispose.assert_called_once()
+        self.assertTrue(self.form.ShowInTaskbar)
 
     def test_close_hides_the_window_but_explicit_exit_and_windows_shutdown_can_quit(self):
         self.tray.attach()

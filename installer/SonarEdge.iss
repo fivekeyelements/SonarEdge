@@ -64,14 +64,17 @@ Source: "{#ReleaseDir}\licenses\*"; DestDir: "{app}\licenses"; Flags: ignorevers
 Source: "..\packaging\MicrosoftEdgeWebview2Setup.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall; Check: NeedsWebView
 
 [Icons]
-Name: "{group}\Sonar Edge"; Filename: "{app}\SonarEdge.exe"; WorkingDir: "{app}"
+; A direct Start menu entry is always created, including upgrades from /NOICONS.
+Name: "{userprograms}\{#ProductName}"; Filename: "{app}\SonarEdge.exe"; WorkingDir: "{app}"
 Name: "{autodesktop}\Sonar Edge"; Filename: "{app}\SonarEdge.exe"; WorkingDir: "{app}"; Tasks: desktopicon
 
 [InstallDelete]
+Type: files; Name: "{group}\Sonar Edge.lnk"
 Type: files; Name: "{group}\Sonar Edge Desktop.lnk"
 Type: files; Name: "{group}\Sonar Edge for iCUE.lnk"
 Type: files; Name: "{group}\Choose app version.lnk"
 Type: files; Name: "{group}\iCUE XL setup.lnk"
+Type: dirifempty; Name: "{group}"
 #if AppId == "SonarEdge"
 Type: files; Name: "{autodesktop}\Sonar Edge for iCUE.lnk"
 #endif
