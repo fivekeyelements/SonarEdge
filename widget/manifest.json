@@ -3,7 +3,7 @@
   "id": "local.sonaredge.xl",
   "name": "Sonar Edge XL",
   "description": "Customizable Sonar mixer and music controls",
-  "version": "1.8.0",
+  "version": "1.0.0",
   "preview_icon": "icon.svg",
   "min_framework_version": "1.0.0",
   "min_app_version": "5.52",

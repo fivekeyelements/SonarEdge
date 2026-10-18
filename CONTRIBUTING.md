@@ -25,7 +25,7 @@ Start menu group, and settings folder; it never uninstalls the real app.
 
 1. Change `VERSION` in `app_version.py`, make the changes, and run the checks.
 2. Push to `main` and verify that the **Build and release** workflow succeeds.
-3. Push the matching tag, such as `v1.8.1`, or run the workflow manually with
+3. Push the matching tag, such as `v1.0.1`, or run the workflow manually with
    **Publish** selected. The workflow builds and publishes the Setup EXE,
    portable ZIP, and SHA256SUMS.txt in GitHub Releases.
 

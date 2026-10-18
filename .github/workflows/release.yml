@@ -77,4 +77,4 @@ jobs:
           $version = python -c 'from app_version import VERSION; print(VERSION)'
           $tag = "v$version"
           if ($env:GITHUB_REF -like 'refs/tags/*' -and $env:GITHUB_REF_NAME -ne $tag) { throw 'Tag must match app_version.py' }
-          gh release create $tag "releases/SonarEdge-Setup-$version-Windows-x64.exe" "releases/SonarEdge-$version-Windows-x64.zip" releases/SHA256SUMS.txt --title "Sonar Edge $version" --generate-notes --target $env:GITHUB_SHA
+          gh release create $tag "releases/SonarEdge-Setup-$version-Windows-x64.exe" "releases/SonarEdge-$version-Windows-x64.zip" releases/SHA256SUMS.txt --title "Sonar Edge $version" --generate-notes --latest --target $env:GITHUB_SHA

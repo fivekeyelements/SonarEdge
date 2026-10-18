@@ -26,7 +26,7 @@ def repository(value):
 
 def version_tuple(value):
     if not isinstance(value, str) or not re.fullmatch(r'v?\d{1,6}\.\d{1,6}\.\d{1,6}', value):
-        raise ValueError('The release needs a stable version tag such as v1.8.1')
+        raise ValueError('The release needs a stable version tag such as v1.0.1')
     return tuple(map(int, value.lstrip('v').split('.')))
 
 
