@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark"><title>Sonar Edge</title>
+  <link rel="icon" href="/icon.svg"><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/appearance.css"><link rel="stylesheet" href="/readable.css"><link rel="stylesheet" href="/effects.css">
+  <script src="/visuals.js" defer></script>
+  <script src="/app.js" defer></script>
+</head>
+<body>
+<div id="stage">
+  <div id="background-layer" aria-hidden="true"><div id="background-gradient"></div><img id="background-image" alt="" hidden><video id="background-video" autoplay loop muted playsinline hidden></video></div><div id="backdrop-shade" aria-hidden="true"></div>
+  <div id="app-ambient" class="ambient" aria-hidden="true"><div class="ambient-layer"></div><div class="ambient-layer"></div></div>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark"><i></i><i></i><i></i><i></i></span><strong>SONAR <span>EDGE</span></strong></div>
+    <div class="top-actions"><span id="connection" class="connection">Connecting…</span><time id="clock"></time><button id="customize" class="button quiet" aria-label="Customize panel" data-icon="sliders">Customize</button><button id="fullscreen" class="icon-button quiet" aria-label="Toggle fullscreen" data-icon="expand"></button></div>
+  </header>
+  <main id="workspace" class="workspace">
+    <section class="player panel" aria-label="MusicBee player">
+      <div id="player-ambient" class="ambient" aria-hidden="true"><div class="ambient-layer"></div><div class="ambient-layer"></div></div>
+      <div class="section-heading"><div><span class="status-dot" id="music-dot"></span><button class="player-select-button" id="choose-player" title="Choose music app" aria-label="Choose music app"><span id="player-name">MusicBee</span><span data-icon="down"></span></button><span class="eyebrow" id="play-state">CONNECTING</span></div></div>
+      <div class="player-body"><div class="track">
+        <div class="artwork"><div id="art-placeholder" data-icon="music"></div><img id="artwork" alt="Current album artwork" hidden></div>
+        <div class="track-info"><h2 id="track-title">Connecting to MusicBee</h2><p id="track-artist">Your music, right here.</p><p id="track-album" class="album"></p></div>
+      </div>
+      <div class="transport">
+        <button class="icon-button transport-small" data-music="shuffle" data-icon="shuffle" aria-label="Toggle MusicBee shuffle" aria-pressed="false" disabled></button>
+        <button class="icon-button" data-music="previous" data-icon="previous" aria-label="Previous MusicBee track" disabled></button>
+        <button class="play-button" data-music="playpause" id="play" data-icon="play" aria-label="Play MusicBee" disabled></button>
+        <button class="icon-button" data-music="next" data-icon="next" aria-label="Next MusicBee track" disabled></button>
+        <button class="icon-button transport-small" data-music="repeat" data-icon="repeat" aria-label="Cycle MusicBee repeat mode" aria-pressed="false" disabled><span id="repeat-one" hidden>1</span></button>
+      </div>
+      <div class="timeline" id="timeline" hidden><span id="elapsed">0:00</span><input id="seek" type="range" min="0" max="100" value="0" step="0.1" aria-label="MusicBee playback position"><span id="duration">0:00</span></div>
+      <div class="player-foot"><label class="music-volume-control"><span data-icon="volume"></span><input id="music-volume" type="range" min="0" max="100" value="0" step="1" aria-label="Music player volume" disabled><output id="music-volume-value">—</output></label><button class="button secondary" id="musicbee-helper" hidden>Enable music bars</button></div></div>
+    </section>
+    <section class="mixer panel" aria-label="SteelSeries Sonar mixer">
+      <div id="mixer-ambient" class="ambient" aria-hidden="true"><div class="ambient-layer"></div><div class="ambient-layer"></div></div>
+      <div class="section-heading"><div><span class="status-dot" id="sonar-dot"></span><h1>Sonar mixer</h1><span class="eyebrow" id="sonar-mode">CONNECTING</span></div><div class="chatmix-control" id="chatmix-control"><span class="chatmix-label">ChatMix</span><span class="chatmix-end" data-icon="game"><span>Game</span></span><div class="chatmix-track"><input type="range" id="chatmix" min="-100" max="100" step="1" value="0" aria-label="ChatMix balance: Game to Chat" disabled></div><span class="chatmix-end" data-icon="chat"><span>Chat</span></span><button class="icon-button quiet" id="chatmix-center" aria-label="Reset ChatMix to center" title="Center ChatMix" disabled>Center</button><span id="chatmix-note" hidden></span></div></div>
+      <div id="channels" class="channels"></div>
+    </section>
+  </main>
+  <footer><div id="shortcuts" class="shortcuts"></div></footer>
+  <div class="overlay" id="overlay" hidden>
+    <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" tabindex="-1">
+      <div class="sheet-head"><div><span class="eyebrow" id="sheet-kicker">MAKE IT YOURS</span><h2 id="sheet-title">Customize your Edge</h2></div><button id="close-sheet" class="icon-button quiet" data-icon="close" aria-label="Close settings"></button></div>
+      <div id="sheet-content"></div>
+    </section>
+  </div>
+  <div id="toast" class="toast" role="status" hidden></div>
+</div>
+</body></html>

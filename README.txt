@@ -1,0 +1,148 @@
+SONAR EDGE 1.8.0
+Windows desktop audio controls
+
+START
+Run SonarEdge-Setup-1.8.0-Windows-x64.exe to install Sonar Edge.
+The installer adds it to Windows Installed apps and your Start menu.
+A portable ZIP is also available; extract it and open SonarEdge.exe.
+On first launch, choose Desktop or iCUE iframe in Customize > App version.
+Choose "Open SonarEdge.exe as" and Save changes to remember your default.
+The normal EXE and Sonar Edge shortcut follow that choice on future launches.
+The Desktop version uses native controls and opens on your Xeneon Edge.
+Python and a browser tab are not needed.
+Both versions share your layout, music app, backgrounds, meters and ChatMix.
+Use "Choose app version.vbs" or --choose to return to the choice screen.
+
+START WITH WINDOWS
+Open Customize > App version, enable Start with Windows, and Save changes.
+Sonar Edge starts your selected Desktop or iCUE version after Windows sign-in.
+Installed copies start directly from LocalAppData\Programs\SonarEdge.
+Portable copies can keep a managed startup copy until you install the app.
+No administrator access, scheduled task, script, or PowerShell process is
+used for startup. The startup setting also appears in the installer.
+Turn the checkbox off and save to remove only Sonar Edge's startup entry.
+SteelSeries GG and iCUE still need their own startup settings enabled if used;
+Sonar Edge reconnects as the audio apps become available. MusicBee controls
+connect when MusicBee is running. A short startup delay lets displays settle.
+
+iCUE XL WIDGET
+To run inside iCUE instead, start Start iCUE companion.vbs or the installed
+"Sonar Edge for iCUE" shortcut. Import Sonar Edge XL.icuewidget into iCUE,
+add it to a page, and choose Appearance > Size > XL. Full instructions are
+in iCUE XL setup.txt. The companion stays in the system tray and supplies
+the widget's controls over an automatically configured local connection.
+No address entry, Python installation, or public hosting is needed.
+Customize > App version also offers Start iCUE companion, Find XL widget,
+an iCUE setup guide, and optional Copy URL / Copy iframe HTML controls.
+The imported widget reconnects automatically after the companion restarts.
+
+INSTALL, UPDATE AND UNINSTALL
+The Setup EXE installs Sonar Edge for your Windows account, with Start menu
+shortcuts, optional Desktop shortcuts, and an optional Windows startup entry.
+It stays in LocalAppData\Programs\SonarEdge until you uninstall it. The
+extracted ZIP or downloaded installer can be deleted after installation.
+Setup checks WebView2 and installs Microsoft's runtime only if it is missing;
+that one-time runtime installation needs internet access.
+
+Open Customize > Updates > Check for updates. When a newer stable release
+is available, choose Download & install. Sonar Edge downloads the installer
+from fivekeyelements/SonarEdge on GitHub, checks its published SHA-256 digest,
+and installs it in place. Both views close and your selected view reopens.
+Startup choices, layouts, backgrounds and player selection are preserved.
+Updates run only when you request them. No GitHub account is needed.
+
+To remove the installed app, use Windows Settings > Apps > Installed apps >
+Sonar Edge > Uninstall. The uninstaller removes the program, shortcuts and
+its startup entry. It asks whether you also want to remove saved layouts,
+backgrounds and cached updates; keeping them is the default. The optional
+MusicBee helper is a separate MusicBee plugin and can be removed in MusicBee.
+The imported widget's library entry can be removed separately in iCUE.
+
+XENEON EDGE
+Sonar Edge automatically opens fullscreen on a detected Xeneon Edge, including
+when you double-click the portable EXE or open it from the companion tray.
+Without an Edge connected, it opens in a normal window on your main display.
+Tap the display icon to turn automatic placement off, or select another monitor.
+The --windowed option opens a normal window for a single launch.
+Use F11 to toggle fullscreen and Escape to leave it.
+The Edge must be available as an extended Windows display for a desktop app.
+
+CONTROL
+Run SteelSeries GG with Sonar enabled. Volumes, mute, presets, and output/input
+selection operate on that PC's Sonar instance. Sonar is detected automatically.
+Sonar's own internal local API is used; there is no address or port to configure,
+and the standalone view does not start an HTTP server or listen for network
+connections. The optional iCUE companion starts its loopback-only connection.
+
+Tap the music app name to select MusicBee, another running Windows media app,
+or Windows' active media app. Controls appear according to what the player
+provides. MusicBee needs its Media Control/SMTC plugin for metadata and controls.
+Its installed plugin may not provide track timing, shuffle, or repeat state.
+For MusicBee progress, seeking and a real volume slider, choose Customize >
+Layout & player > Install MusicBee helper, then restart MusicBee. The helper
+uses a private local named pipe, not a URL or network port. It installs into
+%APPDATA%\MusicBee\Plugins. Portable MusicBee users can copy mb_SonarEdge.dll
+from that folder into their own MusicBee Plugins folder if it is elsewhere.
+It works alongside the existing Media Control plugin for artwork and metadata.
+
+CUSTOMIZE
+Use Customize for backgrounds, GIF/video files, colors, fonts, transparency,
+panel sizes, channel order, visibility, labels, and shortcut icons. Backgrounds
+are selected through a Windows file picker and copied into your own profile.
+Optional remote image/video backgrounds need internet access.
+Choose Appearance > Text size for Comfortable, Large, or Extra large text.
+Settings use a larger sidebar and keep Save changes visible while scrolling.
+Appearance > Artwork size offers Compact, Large and Extra large artwork.
+Customize > Bottom buttons lets you choose up to eight actions, edit their
+labels and icons, reorder them, remove them, and hide or show button labels.
+Mixer channels show the connected output or microphone input; tap that device
+to choose another. The separate EQ button opens only equalizer presets.
+The section launch icons have been removed; customizable bottom actions can
+still open MusicBee or Sonar. Artwork effects > Sonar mixer offers Match music
+panel, Off, Blurred album artwork, and Album color wash. Match is the default.
+Live level bars read Windows' peak meters on the Sonar virtual channels, before
+Sonar volume. They show activity even if a channel is turned down; the Mute
+button still shows its mute state. Master summarizes Game, Chat, Media and Aux
+activity. It is not a measurement of a single mixed output device. Unavailable
+meters are dim. Windows software meters require shared-mode audio.
+ChatMix balances Game and Chat, with a Center button. Headsets that own ChatMix
+show their status and disable software adjustment. Toggle meters or ChatMix in
+Customize > Mixer channels.
+
+ARTWORK EFFECTS
+Customize > Artwork effects controls album colors and backgrounds separately.
+Choose colors for the music panel or the whole app. Music panel and Whole app
+each offer Off, Blurred album artwork, or Album color wash. Animation, intensity
+and blur can be adjusted. Effects follow the current album and respect Windows'
+reduced-motion preference. Turn the whole-app effect off to use your custom
+background. Without artwork the app falls back to your saved colors/background.
+The playback seek line and the shorter, segmented volume bar have distinct
+shapes. The seek line follows playback between player updates.
+
+Saved settings and media are in %LOCALAPPDATA%\SonarEdge.
+Export/import transfers settings as JSON. Copy the backgrounds subfolder as
+well if you want those uploaded images/videos on another PC.
+
+SHARE
+Send this original ZIP, or SonarEdge.exe, to another Windows 10/11 x64 user.
+Use the ZIP if they might need the optional installer or WebView2 bootstrapper.
+Each person has independent settings. The original release contains no personal
+settings, backgrounds, music library, artwork, account information, or logs.
+They need their own SteelSeries GG/Sonar and media player installed.
+
+Third-party license notices are included. This is an independent desktop app;
+SteelSeries GG, MusicBee, and CORSAIR XENEON EDGE remain separate products.
+
+TROUBLESHOOTING
+If the window cannot open, run Setup again to check WebView2.
+Diagnostics are in %LOCALAPPDATA%\SonarEdge\sonar-edge.log.
+Closing the standalone app stops its audio polling. If you started the iCUE
+companion, right-click its tray icon and choose Exit companion to stop it.
+
+This build has been tested on its development Windows PC. Other Windows PCs
+have not yet been tested, so keep this as an early shareable build.
+
+DEVELOPMENT
+Run .venv/Scripts/python.exe native_app.py for the desktop view.
+Run .venv/Scripts/python.exe build_native.py to build the EXE and share ZIP.
+Builds use Windows .NET Framework for the included MusicBee helper.

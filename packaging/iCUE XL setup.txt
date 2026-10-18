@@ -1,0 +1,52 @@
+SONAR EDGE XL - iCUE setup
+
+1. Extract the entire ZIP and open SonarEdge.exe.
+2. In Customize > App version, choose Start iCUE companion. It stays in the
+   system tray. Use Find XL widget to locate the importable widget file.
+3. In iCUE, open XENEON EDGE > Screen Setup. Set Display Mode to iCUE Widgets,
+   then open Widgets.
+4. Use the widget import (+) button and choose Sonar Edge XL.icuewidget.
+   If iCUE asks to allow access to localhost:47832, click Allow. That is the
+   companion running on your own PC; it supplies Sonar and music controls.
+5. Add Sonar Edge XL to an empty page/slot.
+6. Select the widget, open Appearance, and set Size to XL.
+
+Sonar Edge XL is a native entry in iCUE's widget library after importing the
+package. Select it there to add it; no iframe HTML or URL entry is needed.
+To start the companion automatically at sign-in, open Customize > App version,
+choose iCUE iframe as the default, check Start with Windows, then Save changes.
+Enable iCUE's own Windows startup setting as well.
+
+XL fills the iCUE dashboard area. On a horizontal XENEON EDGE, iCUE reserves
+its own 12-pixel border, leaving a 2536 x 696 content area. Sonar Edge fills
+that area with no additional iframe border, margins, or scrollbars.
+The size is chosen in iCUE; an iframe cannot resize its enclosing widget.
+
+The companion must keep running to control Sonar and the music player.
+It uses an automatic loopback-only connection on this PC. You do not enter
+an IP address, choose a port, or host a website. This local connection is
+required for the iCUE iframe version; the standalone desktop view uses its
+native control bridge instead.
+
+Each person installing the shared ZIP runs their own local companion.
+No music, settings, or controls are sent to another person's PC.
+The widget and desktop app share customization in LocalAppData\SonarEdge.
+Meters, ChatMix, artwork effects, progress, seeking, and music player volume
+use the same controls in either view. The player must support those controls;
+MusicBee progress and volume use the included MusicBee helper.
+
+Choose "Open SonarEdge.exe as: iCUE iframe" and Save changes to make the
+companion your default. To change back, use Open desktop from the companion
+tray or the iframe's App version page, then save Desktop as your default.
+"Choose app version.vbs" always opens the choice screen, even if iCUE is the
+saved default. Start iCUE companion.vbs always opens the companion directly.
+The normal Sonar Edge shortcut follows your default; Sonar Edge for iCUE
+always starts the companion. No installer is required for the portable ZIP.
+
+To run the companion without installing shortcuts, use Start iCUE companion.vbs.
+To exit it, right-click its system-tray icon and choose Exit companion.
+
+Optional: the exact HTML for iCUE's built-in iFrame widget is:
+<iframe src="http://127.0.0.1:47832/embed" title="Sonar Edge" style="position:fixed;inset:0;width:100%;height:100%;border:0;margin:0;" allow="fullscreen"></iframe>
+
+The importable widget already contains this, so pasting HTML is not needed.

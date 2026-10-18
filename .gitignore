@@ -1,0 +1,32 @@
+.venv/
+__pycache__/
+*.log
+preferences.json
+*.pid
+backgrounds/
+assets/*.ico
+!assets/SonarEdge.ico
+build/
+releases/
+packaging/*.exe
+artwork/
+interface.html
+app-version.json
+update-source.json
+updates/
+musicbee/*.dll
+installation.json
+*.tmp
+# Superseded local prototype launchers and development captures.
+/Edge Audio.icuewidget
+/Enable startup.vbs
+/Launch.vbs
+/Setup.cmd
+/Setup.ps1
+/iCUE iframe.txt
+/preview*.png
+/probe_media.py
+/smoke_http.py
+/packaging/Install.ps1
+/packaging/Install Sonar Edge.cmd
+/web/embed.html
