@@ -13,6 +13,7 @@ class DesktopTray:
         self.on_view = on_view or (lambda mode: None)
         self.find_widget = find_widget
         self.exiting = False
+        self.restoring = False
 
     def attach(self):
         # pywebview's before_show event runs synchronously on the UI thread.
@@ -50,6 +51,8 @@ class DesktopTray:
 
     def on_resize(self, *_):
         from System.Windows.Forms import FormWindowState
+        if self.restoring:
+            return
         form = self.window.native
         if form.WindowState == FormWindowState.Minimized:
             if self.tray is not None and self.tray.Visible:
@@ -58,13 +61,24 @@ class DesktopTray:
             self.restore_state = form.WindowState
 
     def restore(self, *_):
+        from System.Windows.Forms import FormWindowState
         form = self.window.native
         if form.IsDisposed:
             return
-        form.WindowState = self.restore_state
-        form.Show()
-        form.BringToFront()
-        form.Activate()
+        state = self.restore_state
+        if state == FormWindowState.Minimized:
+            state = FormWindowState.Normal
+        # Showing a minimized form can synchronously raise Resize. Do not let
+        # the minimize handler hide it again before WindowState is restored.
+        self.restoring = True
+        try:
+            form.Show()
+            form.WindowState = state
+            form.BringToFront()
+            form.Activate()
+        finally:
+            self.restoring = False
+        self.restore_state = state
         self.on_view('desktop')
 
     def hide(self, *_):

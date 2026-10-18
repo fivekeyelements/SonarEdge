@@ -33,7 +33,7 @@ class TrayTests(unittest.TestCase):
                    'System.Windows.Forms': NS(NotifyIcon=Mock(return_value=self.notify),
                        ContextMenuStrip=Mock(return_value=self.menu),
                        ToolStripMenuItem=lambda text:NS(Text=text, Click=Event()),
-                       FormWindowState=NS(Minimized='minimized'),CloseReason=NS(UserClosing='user'))}
+                       FormWindowState=NS(Minimized='minimized',Normal='normal'),CloseReason=NS(UserClosing='user'))}
         self.patch = patch.dict(sys.modules, modules)
         self.patch.start()
         self.addCleanup(self.patch.stop)
@@ -63,6 +63,14 @@ class TrayTests(unittest.TestCase):
         self.notify.Dispose.assert_called_once()
         self.menu.Dispose.assert_called_once()
         self.icon.Dispose.assert_called_once()
+
+    def test_restore_does_not_rehide_a_minimized_window_during_show(self):
+        self.form.WindowState = 'minimized'
+        self.tray.attach()
+        self.form.Show.side_effect = self.form.Resize.fire
+        self.tray.restore()
+        self.assertEqual(self.form.WindowState,'normal')
+        self.form.Hide.assert_not_called()
         self.tray.dispose()  # Repeated cleanup is harmless.
         self.icon.Dispose.assert_called_once()
 
