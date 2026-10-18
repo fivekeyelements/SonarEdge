@@ -10,6 +10,8 @@ IFRAME_URL = 'http://127.0.0.1:47832/embed'
 IFRAME_HTML = ('<iframe src="' + IFRAME_URL + '" title="Sonar Edge" '
                'style="position:fixed;inset:0;width:100%;height:100%;border:0;margin:0;" '
                'allow="fullscreen"></iframe>')
+WIDGET_UNAVAILABLE = ('The iCUE connection is unavailable. Another app may be using it. '
+                      'Desktop controls remain available; try restarting Sonar Edge.')
 
 
 def preferred_version(data_dir):
@@ -32,6 +34,7 @@ class AppVersions:
         self.current = current
         self.startup = startup
         self.open_view = open_view
+        self.widget_ready = True
         self.command = command or ([sys.executable] if getattr(sys, 'frozen', False)
                                   else [sys.executable, str(self.package_dir / 'native_app.py')])
 
@@ -39,6 +42,8 @@ class AppVersions:
         return {'current': self.current, 'default': preferred_version(self.data_dir),
                 'widgetAvailable': (self.package_dir / 'Sonar Edge XL.icuewidget').is_file(),
                 'guideAvailable': (self.package_dir / 'iCUE XL setup.txt').is_file(),
+                'widgetReady': self.widget_ready,
+                'widgetError': None if self.widget_ready else WIDGET_UNAVAILABLE,
                 'iframeUrl': IFRAME_URL, 'iframeHtml': IFRAME_HTML,
                 'startup': self.startup.info() if self.startup else {'available': False, 'enabled': False}}
 
@@ -64,6 +69,8 @@ class AppVersions:
             mode = data.get('mode')
             if mode not in ('desktop', 'iframe'):
                 raise ValueError('Choose Desktop or iCUE iframe')
+            if mode == 'iframe' and not self.widget_ready:
+                raise ValueError(WIDGET_UNAVAILABLE)
             if self.open_view is None:
                 raise ValueError('The app window is still starting. Try again.')
             self.open_view(mode)

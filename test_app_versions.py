@@ -56,6 +56,16 @@ class AppVersionTests(unittest.TestCase):
             self.modes.perform({'action':'widget','path':'C:/untrusted.exe'})
             self.assertEqual(launch.call_args.args[0],['explorer.exe','/select,',str(widget)])
 
+    def test_unavailable_widget_connection_cannot_hide_the_working_desktop(self):
+        self.modes.open_view = Mock()
+        self.modes.widget_ready = False
+        self.assertIn('Desktop controls remain available', self.modes.info()['widgetError'])
+        with self.assertRaises(ValueError):
+            self.modes.perform({'action':'open','mode':'iframe'})
+        self.modes.open_view.assert_not_called()
+        self.modes.perform({'action':'open','mode':'desktop'})
+        self.modes.open_view.assert_called_once_with('desktop')
+
     def test_startup_choice_is_native_only_and_is_not_part_of_layout_export(self):
         service=Mock()
         service.info.return_value={'available':True,'enabled':True}

@@ -41,7 +41,7 @@ import server as core
 from window_controls import WindowControls
 from desktop_tray import DesktopTray
 from display_selection import startup_display
-from app_versions import AppVersions, launch_version
+from app_versions import AppVersions, launch_version, WIDGET_UNAVAILABLE
 from windows_startup import WindowsStartup
 import app_shutdown
 from app_updates import AppUpdates
@@ -241,6 +241,23 @@ _mutex = None
 _instance_events = {}
 
 
+def start_widget_listener():
+    from http.server import ThreadingHTTPServer
+    try:
+        listener = ThreadingHTTPServer(('127.0.0.1', core.PORT), core.Handler)
+    except OSError:
+        logging.exception('iCUE connection unavailable on local port %s; desktop controls remain available', core.PORT)
+        return None
+    threading.Thread(target=listener.serve_forever, daemon=True, name='SonarEdge-iCUE').start()
+    return listener
+
+
+def stop_widget_listener(listener):
+    if listener is not None:
+        listener.shutdown()
+        listener.server_close()
+
+
 def single_instance(widget=False, choose=False, silent=False):
     global _mutex
     kernel = ctypes.WinDLL('kernel32', use_last_error=True)
@@ -321,55 +338,59 @@ def main():
         Path(args.diagnose).write_text(json.dumps({'version': VERSION, 'transport': 'native', 'state': result}, indent=2), 'utf-8')
         bridge.meters.stop()
         return
-    screens = webview.screens
-    edge_index, edge = startup_display(screens, bridge.preferences.get('autoEdge', True), args.windowed)
-    options = {'screen': edge} if edge is not None else {}
-    window = webview.create_window(APP_NAME, url=prepare_ui(args.choose or not (DATA_DIR / 'app-version.json').exists()), js_api=api, width=1600, height=510,
-                                   min_size=(960, 310), background_color='#101318', text_select=False, hidden=widget, **options)
-    api._window = window
-    api._controls = WindowControls(window)
-    tray_icon = Path(sys.executable) if getattr(sys, 'frozen', False) else ASSETS / 'assets/SonarEdge.ico'
-    desktop_tray = DesktopTray(window, tray_icon,
-        on_view=lambda view: setattr(bridge.app_versions, 'current', view),
-        find_widget=lambda: bridge.app_versions.perform({'action': 'widget'}))
-    bridge.app_versions.open_view = lambda view: api._controls._ui(
-        lambda form: desktop_tray.restore() if view == 'desktop' else desktop_tray.hide())
-    window.events.before_show += desktop_tray.attach
-    if edge is not None:
-        def open_on_edge():
-            result = api.window_action('move', {'display': edge_index, 'fullscreen': True})
-            if result['ok']:
-                logging.info('Opened automatically on Xeneon Edge (%s x %s)', edge.width, edge.height)
-        window.events.loaded += open_on_edge
-    window.events.loaded += lambda: logging.info('Sonar Edge interface loaded; shared desktop and iCUE controls')
-    window.events.loaded += lambda: app_shutdown.listen(lambda: api._controls._ui(lambda form: desktop_tray.exit()))
+    listener = start_widget_listener()
+    bridge.app_versions.widget_ready = listener is not None
+    if listener is None:
+        widget = False
+        bridge.app_versions.current = 'desktop'
     closing = threading.Event()
-    def listen_for_views():
-        kernel = ctypes.WinDLL('kernel32')
-        kernel.WaitForSingleObject.argtypes = [ctypes.c_void_p, ctypes.c_uint32]
-        while not closing.is_set():
-            for mode, event in _instance_events.items():
-                if kernel.WaitForSingleObject(event, 0) == 0:
-                    try:
-                        bridge.app_versions.open_view('desktop' if mode == 'choose' else mode)
-                        if mode == 'choose':
-                            window.evaluate_js('void openSettings("version")')
-                    except Exception:
-                        logging.exception('Could not open the requested Sonar Edge view')
-            closing.wait(.2)
-    window.events.loaded += lambda: threading.Thread(target=listen_for_views, daemon=True,
-                                                     name='SonarEdge-Views').start()
-    from http.server import ThreadingHTTPServer
-    listener = ThreadingHTTPServer(('127.0.0.1', core.PORT), core.Handler)
-    threading.Thread(target=listener.serve_forever, daemon=True, name='SonarEdge-iCUE').start()
-    logging.info('%s %s starting', APP_NAME, VERSION)
     try:
+        screens = webview.screens
+        edge_index, edge = startup_display(screens, bridge.preferences.get('autoEdge', True), args.windowed)
+        options = {'screen': edge} if edge is not None else {}
+        window = webview.create_window(APP_NAME, url=prepare_ui(args.choose or listener is None or not (DATA_DIR / 'app-version.json').exists()), js_api=api, width=1600, height=510,
+                                       min_size=(960, 310), background_color='#101318', text_select=False, hidden=widget, **options)
+        api._window = window
+        api._controls = WindowControls(window)
+        tray_icon = Path(sys.executable) if getattr(sys, 'frozen', False) else ASSETS / 'assets/SonarEdge.ico'
+        desktop_tray = DesktopTray(window, tray_icon,
+            on_view=lambda view: setattr(bridge.app_versions, 'current', view),
+            find_widget=lambda: bridge.app_versions.perform({'action': 'widget'}))
+        def open_view(view):
+            if view == 'iframe' and not bridge.app_versions.widget_ready:
+                raise ValueError(WIDGET_UNAVAILABLE)
+            return api._controls._ui(lambda form: desktop_tray.restore() if view == 'desktop' else desktop_tray.hide())
+        bridge.app_versions.open_view = open_view
+        window.events.before_show += desktop_tray.attach
+        if edge is not None:
+            def open_on_edge():
+                result = api.window_action('move', {'display': edge_index, 'fullscreen': True})
+                if result['ok']:
+                    logging.info('Opened automatically on Xeneon Edge (%s x %s)', edge.width, edge.height)
+            window.events.loaded += open_on_edge
+        window.events.loaded += lambda: logging.info('Sonar Edge interface loaded; shared desktop and iCUE controls')
+        window.events.loaded += lambda: app_shutdown.listen(lambda: api._controls._ui(lambda form: desktop_tray.exit()))
+        def listen_for_views():
+            kernel = ctypes.WinDLL('kernel32')
+            kernel.WaitForSingleObject.argtypes = [ctypes.c_void_p, ctypes.c_uint32]
+            while not closing.is_set():
+                for mode, event in _instance_events.items():
+                    if kernel.WaitForSingleObject(event, 0) == 0:
+                        try:
+                            bridge.app_versions.open_view('desktop' if mode == 'choose' else mode)
+                            if mode == 'choose':
+                                window.evaluate_js('void openSettings("version")')
+                        except Exception:
+                            logging.exception('Could not open the requested Sonar Edge view')
+                closing.wait(.2)
+        window.events.loaded += lambda: threading.Thread(target=listen_for_views, daemon=True,
+                                                         name='SonarEdge-Views').start()
+        logging.info('%s %s starting', APP_NAME, VERSION)
         webview.start(gui='edgechromium', http_server=False, private_mode=False,
                       storage_path=str(DATA_DIR / 'WebView2'))
     finally:
         closing.set()
-        listener.shutdown()
-        listener.server_close()
+        stop_widget_listener(listener)
         bridge.meters.stop()
         bridge.loop.call_soon_threadsafe(bridge.loop.stop)
 

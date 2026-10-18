@@ -2,11 +2,13 @@
 import copy
 import json
 import os
+import socket
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, Mock
+from urllib.request import urlopen
 import native_app as native
 from webview.util import needs_server
 
@@ -35,6 +37,52 @@ class NativeTests(unittest.TestCase):
         self.assertNotIn('<script src=', html)
         self.assertNotIn('rel="stylesheet"', html)
         self.assertIn('SONAR <span>EDGE</span>', html)
+
+    def test_busy_widget_connection_is_recoverable_and_leaves_its_owner_untouched(self):
+        with socket.socket() as occupied:
+            occupied.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+            occupied.bind(('127.0.0.1', 0))
+            occupied.listen()
+            port = occupied.getsockname()[1]
+            with patch.object(native.core, 'PORT', port), self.assertLogs(level='ERROR'):
+                self.assertIsNone(native.start_widget_listener())
+            self.assertEqual(occupied.getsockname(), ('127.0.0.1', port))
+            native.stop_widget_listener(None)
+
+    def test_available_widget_listener_serves_locally_and_shuts_down(self):
+        with patch.object(native.core, 'PORT', 0):
+            listener = native.start_widget_listener()
+        self.assertIsNotNone(listener)
+        try:
+            with patch.object(native.core, 'PORT', listener.server_port):
+                with urlopen(f'http://127.0.0.1:{listener.server_port}/', timeout=3) as response:
+                    self.assertIn('data-icon="gear"', response.read().decode('utf-8'))
+        finally:
+            native.stop_widget_listener(listener)
+        self.assertEqual(listener.socket.fileno(), -1)
+
+    def test_failed_widget_startup_opens_desktop_and_cleans_up_without_a_listener(self):
+        class StopBeforeWindow(Exception):
+            pass
+        bridge = Mock(preferences=copy.deepcopy(native.core.DEFAULTS))
+        with patch.object(native.sys, 'argv', ['SonarEdge', '--widget']), \
+             patch.object(native, 'single_instance', return_value=True), \
+             patch.object(native, 'WindowsStartup'), \
+             patch.object(native.core, 'BRIDGE', bridge), \
+             patch.object(native.core, 'PORT', 47832), \
+             patch.object(native.threading, 'Thread'), \
+             patch.object(native, 'start_widget_listener', return_value=None), \
+             patch.object(native.webview, 'screens', []), \
+             patch.object(native, 'startup_display', return_value=(None, None)), \
+             patch.object(native.webview, 'create_window', side_effect=StopBeforeWindow) as create:
+            with self.assertRaises(StopBeforeWindow):
+                native.main()
+        self.assertFalse(create.call_args.kwargs['hidden'])
+        self.assertEqual(bridge.app_versions.current, 'desktop')
+        self.assertFalse(bridge.app_versions.info()['widgetReady'])
+        html = (self.folder / 'interface.html').read_text('utf-8')
+        self.assertIn('window.SONAR_EDGE_CHOOSE_VERSION=true', html)
+        bridge.meters.stop.assert_called_once()
 
     def test_native_api_rejects_unknown_paths_and_methods(self):
         for method,path in [('GET','/arbitrary/file'),('POST','/api/background'),('DELETE','/api/preferences'),('GET','/api/launch')]:
