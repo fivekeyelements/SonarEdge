@@ -36,7 +36,7 @@ TOKEN = secrets.token_urlsafe(32)
 CHANNELS = {'master': 'Master', 'game': 'game', 'chat': 'chatRender',
             'media': 'media', 'aux': 'aux', 'mic': 'chatCapture'}
 DEFAULTS = {
-    'layout': 'compact', 'playerSide': 'left', 'showClock': True, 'playerApp': 'musicbee', 'autoEdge': True,
+    'layout': 'compact', 'playerSide': 'right', 'showClock': True, 'playerApp': 'musicbee', 'autoEdge': True,
     'accent': '#8de4c7',
     'showArtwork': True,
     'background': {'kind': 'gradient', 'source': '', 'color': '#101318', 'color2': '#243a3b',
@@ -414,7 +414,7 @@ class Media:
                 logging.exception('Artwork unavailable')
             self.art_key = key
             self.art_version += 1
-            self.palette = artwork_palette.from_image(self.art)
+            self.palette = await asyncio.to_thread(artwork_palette.from_image, self.art)
             self.palette_retry_at = time.monotonic() + 3
         # The Windows image runtime or the media thumbnail can still be warming
         # up at launch. A transient failure must not cache the fallback forever.

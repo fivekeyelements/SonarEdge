@@ -34,7 +34,9 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install --upgrade pip
+          if ($LASTEXITCODE -ne 0) { throw 'pip upgrade failed' }
           python -m pip install -r requirements-desktop.txt
+          if ($LASTEXITCODE -ne 0) { throw 'Build dependency installation failed' }
           New-Item -ItemType Directory -Path build/tools -Force | Out-Null
           Invoke-WebRequest https://github.com/jrsoftware/issrc/releases/download/is-6_7_3/innosetup-6.7.3.exe -OutFile build/tools/inno-setup.exe
           $signature = Get-AuthenticodeSignature build/tools/inno-setup.exe
@@ -48,19 +50,31 @@ jobs:
       - name: Test
         run: |
           python -m unittest discover -q
+          if ($LASTEXITCODE -ne 0) { throw 'Unit tests failed' }
           node --check web/app.js
+          if ($LASTEXITCODE -ne 0) { throw 'JavaScript syntax check failed' }
           node test_visuals.cjs
+          if ($LASTEXITCODE -ne 0) { throw 'Artwork visual tests failed' }
           node test_widget_fit.cjs
+          if ($LASTEXITCODE -ne 0) { throw 'Widget layout tests failed' }
           node test_iframe_reconnect.cjs
+          if ($LASTEXITCODE -ne 0) { throw 'Widget reconnect tests failed' }
+          node test_actions.cjs
+          if ($LASTEXITCODE -ne 0) { throw 'Shortcut state tests failed' }
       - name: Build application and installers
         run: |
           python build_native.py
+          if ($LASTEXITCODE -ne 0) { throw 'Application build failed' }
           python build_installer.py
+          if ($LASTEXITCODE -ne 0) { throw 'Installer build failed' }
           python build_installer.py --test
+          if ($LASTEXITCODE -ne 0) { throw 'Isolated installer build failed' }
       - name: Verify release and installer lifecycle
         run: |
           python verify_release.py
+          if ($LASTEXITCODE -ne 0) { throw 'Release verification failed' }
           python verify_installer.py
+          if ($LASTEXITCODE -ne 0) { throw 'Installer lifecycle verification failed' }
       - uses: actions/upload-artifact@v7
         with:
           name: SonarEdge-Windows-x64
@@ -75,6 +89,7 @@ jobs:
         shell: pwsh
         run: |
           $version = python -c 'from app_version import VERSION; print(VERSION)'
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot read the release version' }
           $tag = "v$version"
           if ($env:GITHUB_REF -like 'refs/tags/*' -and $env:GITHUB_REF_NAME -ne $tag) { throw 'Tag must match app_version.py' }
           $draft = gh release view $tag --json isDraft --jq .isDraft 2>$null

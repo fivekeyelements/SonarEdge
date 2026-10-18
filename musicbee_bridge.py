@@ -57,7 +57,9 @@ def request(action='state', value=None):
     deadline = time.monotonic() + .25
     while True:
         if kernel.WaitNamedPipeW(name, 50):
-            handle = kernel.CreateFileW(name, 0xC0000000, 0, None, 3, 0x40000000, None)
+            # Overlapped I/O; allow identification only, never server impersonation.
+            flags = 0x40000000 | 0x00100000 | 0x00010000
+            handle = kernel.CreateFileW(name, 0xC0000000, 0, None, 3, flags, None)
             if handle != ctypes.c_void_p(-1).value:
                 break
         if time.monotonic() >= deadline:

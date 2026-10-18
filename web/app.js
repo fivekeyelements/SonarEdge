@@ -38,6 +38,11 @@ const actionIcons = {mic:'mic',media:'volume',master:'muted',musicbee:'music',so
 const editableIcons = {mic:'Microphone',volume:'Speaker',muted:'Muted speaker',music:'Music note',headphones:'Headphones',sliders:'Mixer',play:'Play',pause:'Pause',previous:'Previous',next:'Next',stop:'Stop',external:'Open app'};
 const internal = {game:'game',chat:'chatRender',media:'media',aux:'aux',mic:'chatCapture'};
 
+function shortcutIcon(action, style={}, playing=false, muted=false) {
+  if(style.icon && style.icon!==actionIcons[action])return style.icon;
+  return muted?'muted':action==='playpause'&&playing?'pause':actionIcons[action];
+}
+
 function hydrate(parent = document) {
   $$('[data-icon]', parent).forEach(el => {
     if (!el.querySelector(':scope > svg')) el.insertAdjacentHTML('afterbegin', svg(el.dataset.icon));
@@ -254,7 +259,7 @@ function update() {
     $('span',button).textContent=label;
     button.title=label;button.setAttribute('aria-label',label);
     if(['mic','media','master'].includes(action))button.setAttribute('aria-pressed',String(!!channel?.muted));
-    const icon=preferences.shortcutAppearance?.[action]?.icon||(channel?.muted?'muted':action==='playpause'&&music.playing?'pause':actionIcons[action]);
+    const icon=shortcutIcon(action,preferences.shortcutAppearance?.[action],music.playing,channel?.muted);
     const oldIcon=$('svg',button);if(oldIcon.dataset.name!==icon){oldIcon.outerHTML=svg(icon);$('svg',button).dataset.name=icon;}
     button.disabled = ['musicbee','sonar'].includes(action) ? false : ['mic','media','master'].includes(action) ? !sonar.connected || !channel?.available || !channel.enabled : !music.connected || !music.controls?.[action];
   });
@@ -347,7 +352,12 @@ function collectDraft() {
   if ($('#shortcut-labels')) {
     draft.shortcutLabels=$('#shortcut-labels').checked;
     draft.shortcuts=$$('.action-setting-row').map(row=>$('.shortcut-select',row).value);
-    $$('.action-setting-row').forEach(row=>{draft.shortcutAppearance[$('.shortcut-select',row).value]={label:$('.action-label',row).value.trim(),icon:$('.action-icon',row).value};});
+    $$('.action-setting-row').forEach(row=>{
+      const action=$('.shortcut-select',row).value,label=$('.action-label',row).value.trim(),icon=$('.action-icon',row).value,style={};
+      if(label)style.label=label;
+      if(icon!==actionIcons[action])style.icon=icon;
+      draft.shortcutAppearance[action]=style;
+    });
   }
   if($('#settings-meters'))draft.showMeters=$('#settings-meters').checked;
   if($('#settings-chatmix'))draft.showChatMix=$('#settings-chatmix').checked;

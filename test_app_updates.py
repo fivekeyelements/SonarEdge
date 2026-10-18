@@ -61,6 +61,12 @@ class UpdateTests(unittest.TestCase):
 
     def test_verified_installer_launches_with_upgrade_and_reopen_flags(self):
         body=b'MZ'+b'installer'*100
+        cache=self.root/'updates'
+        cache.mkdir()
+        stale=[cache/'SonarEdge-Setup-1.0.0-Windows-x64.exe',cache/'SonarEdge-Setup-1.0.1-Windows-x64.exe.part']
+        for file in stale:file.write_bytes(b'old download')
+        unrelated=cache/'keep-my-file.exe'
+        unrelated.write_bytes(b'not a generated updater file')
         self.manager.candidate=updates.release_candidate(payload(body),'example/SonarEdge')
         self.opener.open.return_value=io.BytesIO(body)
         self.manager.download_and_install()
@@ -71,6 +77,8 @@ class UpdateTests(unittest.TestCase):
         self.assertFalse(self.launcher.call_args.kwargs.get('shell',False))
         self.assertEqual(self.launcher.call_args.kwargs['env']['PYINSTALLER_RESET_ENVIRONMENT'],'1')
         self.assertEqual(list((self.root/'updates').glob('*.part')),[])
+        self.assertTrue(unrelated.exists())
+        self.assertFalse(any(file.exists() for file in stale))
 
     def test_corrupt_truncated_oversize_and_non_executable_downloads_never_run(self):
         for downloaded,expected in [(b'MZbad',b'MZgood'),(b'MZshort',b'MZlongerpayload'),

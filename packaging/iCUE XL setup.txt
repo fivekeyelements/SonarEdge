@@ -22,6 +22,11 @@ its own 12-pixel border, leaving a 2536 x 696 content area. Sonar Edge fills
 that area with no additional iframe border, margins, or scrollbars.
 The size is chosen in iCUE; an iframe cannot resize its enclosing widget.
 
+The current package enables touch and mouse input on XENEON EDGE. If you
+imported an older package that displays controls but ignores input, import
+the current Sonar Edge XL.icuewidget to update the widget stored by iCUE.
+Updating the companion alone does not update iCUE's imported widget manifest.
+
 The companion must keep running to control Sonar and the music player.
 It uses an automatic loopback-only connection on this PC. You do not enter
 an IP address, choose a port, or host a website. This local connection is

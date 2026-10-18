@@ -10,6 +10,7 @@ python -m unittest discover -q
 node test_visuals.cjs
 node test_widget_fit.cjs
 node test_iframe_reconnect.cjs
+node test_actions.cjs
 python build_native.py
 python build_installer.py
 python build_installer.py --test

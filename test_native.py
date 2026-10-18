@@ -1,6 +1,7 @@
 """Native desktop transport and file isolation checks; no audio changes."""
 import copy
 import json
+import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
@@ -48,6 +49,23 @@ class NativeTests(unittest.TestCase):
         self.assertEqual(self.bridge.state['music']['art'],'/api/art?v=1')
         state['data']['preferences']['accent']='#000000'
         self.assertNotEqual(self.bridge.preferences['accent'],'#000000')
+
+    def test_artwork_cache_is_bounded_and_keeps_current_and_unrelated_files(self):
+        folder = self.folder / 'artwork'
+        folder.mkdir()
+        current = folder / ('a' * 64 + '.jpg')
+        current.write_bytes(b'current')
+        for number in range(20):
+            file = folder / (f'{number:064x}' + '.png')
+            file.write_bytes(b'cached')
+            os.utime(file, (number + 1, number + 1))
+        unrelated = folder / 'keep-me.txt'
+        unrelated.write_text('not a generated artwork file', 'utf-8')
+        native.trim_artwork_cache(folder, current)
+        self.assertTrue(current.exists())
+        self.assertTrue(unrelated.exists())
+        self.assertEqual(len(list(folder.glob('*.png'))), 15)
+        self.assertFalse((folder / (f'{0:064x}' + '.png')).exists())
 
     def test_local_background_copy_rejects_code_and_deduplicates(self):
         with self.assertRaises(ValueError):native.background_from_bytes(b'<html>bad</html>')

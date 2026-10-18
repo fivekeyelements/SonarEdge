@@ -136,6 +136,12 @@ class AppUpdates:
             folder.mkdir(parents=True, exist_ok=True)
             target = folder / candidate['name']
             partial = folder / (candidate['name'] + '.part')
+            for stale in folder.iterdir():
+                if stale != target and re.fullmatch(r'SonarEdge-Setup-\d+\.\d+\.\d+-Windows-x64\.exe(?:\.part)?', stale.name):
+                    try:
+                        stale.unlink()
+                    except OSError:
+                        pass
             digest = hashlib.sha256()
             received = 0
             with self._open(candidate['url'], 'application/octet-stream') as response, partial.open('wb') as file:

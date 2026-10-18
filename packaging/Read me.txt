@@ -38,7 +38,7 @@ The imported widget reconnects automatically after the companion restarts.
 
 INSTALL, UPDATE AND UNINSTALL
 The Setup EXE installs Sonar Edge for your Windows account, with Start menu
-shortcuts, optional Desktop shortcuts, and an optional Windows startup entry.
+shortcuts, an optional Desktop shortcut, and an optional Windows startup entry.
 It stays in LocalAppData\Programs\SonarEdge until you uninstall it. The
 extracted ZIP or downloaded installer can be deleted after installation.
 Setup checks WebView2 and installs Microsoft's runtime only if it is missing;

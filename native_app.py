@@ -63,6 +63,20 @@ def background_from_bytes(body):
     return {'source': '/backgrounds/' + name, 'kind': 'video' if ext in ('mp4', 'webm') else 'image'}
 
 
+def trim_artwork_cache(folder, current, keep=16):
+    try:
+        older = [p for p in folder.iterdir() if p != current and
+                 re.fullmatch(r'[a-f0-9]{64}\.(jpg|png|webp|gif)', p.name)]
+        older.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+    except OSError:
+        return
+    for stale in older[keep - 1:]:
+        try:
+            stale.unlink()
+        except OSError:
+            pass
+
+
 def prepare_ui(choose_version=False):
     html = (ASSETS / 'web/index.html').read_text('utf-8')
     css = '\n'.join((ASSETS / 'web' / f).read_text('utf-8') for f in ('style.css', 'appearance.css', 'readable.css', 'effects.css'))
@@ -134,6 +148,7 @@ class NativeAPI:
                     path = folder / (digest + ext)
                     if not path.exists():
                         path.write_bytes(body)
+                    trim_artwork_cache(folder, path)
                     self._art_key, self._art_uri = digest, path.as_uri()
                 music['art'] = self._art_uri
         else:

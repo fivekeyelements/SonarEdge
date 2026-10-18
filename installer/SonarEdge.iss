@@ -69,7 +69,11 @@ Name: "{group}\Sonar Edge for iCUE"; Filename: "{app}\SonarEdge.exe"; Parameters
 Name: "{group}\Choose app version"; Filename: "{app}\SonarEdge.exe"; Parameters: "--choose"; WorkingDir: "{app}"
 Name: "{group}\iCUE XL setup"; Filename: "{app}\iCUE XL setup.txt"
 Name: "{autodesktop}\Sonar Edge"; Filename: "{app}\SonarEdge.exe"; WorkingDir: "{app}"; Tasks: desktopicon
-Name: "{autodesktop}\Sonar Edge for iCUE"; Filename: "{app}\SonarEdge.exe"; Parameters: "--widget"; WorkingDir: "{app}"; Tasks: desktopicon
+
+#if AppId == "SonarEdge"
+[InstallDelete]
+Type: files; Name: "{autodesktop}\Sonar Edge for iCUE.lnk"
+#endif
 
 [Run]
 Filename: "{app}\SonarEdge.exe"; Description: "Open Sonar Edge"; Flags: nowait postinstall skipifsilent
