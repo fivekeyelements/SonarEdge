@@ -22,7 +22,7 @@
 AppId={#AppId}
 AppName={#ProductName}
 AppVersion={#AppVersion}
-AppPublisher=tagmori
+AppPublisher=Kagi Software
 AppPublisherURL=https://github.com/fivekeyelements/SonarEdge
 AppSupportURL=https://github.com/fivekeyelements/SonarEdge/issues
 AppUpdatesURL=https://github.com/fivekeyelements/SonarEdge/releases
@@ -40,7 +40,7 @@ UninstallDisplayIcon={app}\SonarEdge.exe
 UninstallDisplayName={#ProductName}
 VersionInfoVersion={#AppVersion}
 VersionInfoProductName={#ProductName} Setup
-VersionInfoCompany=tagmori
+VersionInfoCompany=Kagi Software
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern

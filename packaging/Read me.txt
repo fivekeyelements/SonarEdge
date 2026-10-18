@@ -1,6 +1,6 @@
 SONAR EDGE 1.0.0
 Windows desktop audio controls
-Developed by tagmori
+Developed by Kagi Software
 
 START
 Run SonarEdge-Setup-1.0.0-Windows-x64.exe to install Sonar Edge.

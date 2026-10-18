@@ -2,7 +2,7 @@
 
 Customizable SteelSeries Sonar and music controls for the CORSAIR XENEON EDGE.
 Use a standalone Windows desktop app or the **Sonar Edge XL** widget in iCUE.
-Developed by **tagmori**.
+Developed by **Kagi Software**.
 
 [Download the latest installer](https://github.com/fivekeyelements/SonarEdge/releases/latest)
 
