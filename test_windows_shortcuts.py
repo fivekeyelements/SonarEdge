@@ -15,7 +15,7 @@ class ShortcutTests(unittest.TestCase):
             executable.write_bytes(b'MZ-fixture')
             link=base/'Startup'/'Sonar Edge.lnk'
             shortcuts.write_shortcut(link,executable,'--startup')
-            self.assertEqual(shortcuts.read_shortcut(link),{'target':str(executable),'arguments':'--startup','directory':str(executable.parent)})
+            self.assertEqual(shortcuts.read_shortcut(link),{'target':str(executable.resolve()),'arguments':'--startup','directory':str(executable.parent.resolve())})
             self.assertEqual(list(link.parent.iterdir()),[link])
 
     def test_failed_update_keeps_the_previous_shortcut(self):

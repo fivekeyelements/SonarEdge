@@ -84,5 +84,7 @@ def startup_folder():
     shell.SHGetFolderPathW.argtypes = [w.HWND,c.c_int,w.HANDLE,w.DWORD,w.LPWSTR]
     shell.SHGetFolderPathW.restype = c.c_long
     folder = c.create_unicode_buffer(32768)
-    check(shell.SHGetFolderPathW(None,7,None,0,folder))  # CSIDL_STARTUP for this user.
+    check(shell.SHGetFolderPathW(None,7 | 0x4000,None,0,folder))  # CSIDL_STARTUP, allow a not-yet-created folder.
+    if not folder.value:
+        raise OSError('Windows could not locate your Startup folder.')
     return Path(folder.value)
