@@ -1,19 +1,19 @@
 SONAR EDGE XL - iCUE setup
 
 1. Extract the entire ZIP and open SonarEdge.exe.
-2. In Customize > App version, choose Start iCUE companion. It stays in the
-   system tray. Use Find XL widget to locate the importable widget file.
+2. Tap the bottom gear for Settings > App version. Use Find XL widget to
+   locate the importable widget file. Keep Sonar Edge running.
 3. In iCUE, open XENEON EDGE > Screen Setup. Set Display Mode to iCUE Widgets,
    then open Widgets.
 4. Use the widget import (+) button and choose Sonar Edge XL.icuewidget.
    If iCUE asks to allow access to localhost:47832, click Allow. That is the
-   companion running on your own PC; it supplies Sonar and music controls.
+   Sonar Edge running on your own PC; it supplies Sonar and music controls.
 5. Add Sonar Edge XL to an empty page/slot.
 6. Select the widget, open Appearance, and set Size to XL.
 
 Sonar Edge XL is a native entry in iCUE's widget library after importing the
 package. Select it there to add it; no iframe HTML or URL entry is needed.
-To start the companion automatically at sign-in, open Customize > App version,
+To start Sonar Edge automatically at sign-in, open Settings > App version,
 choose iCUE iframe as the default, check Start with Windows, then Save changes.
 Enable iCUE's own Windows startup setting as well.
 
@@ -25,32 +25,19 @@ The size is chosen in iCUE; an iframe cannot resize its enclosing widget.
 The current package enables touch and mouse input on XENEON EDGE. If you
 imported an older package that displays controls but ignores input, import
 the current Sonar Edge XL.icuewidget to update the widget stored by iCUE.
-Updating the companion alone does not update iCUE's imported widget manifest.
+Updating the app alone does not update iCUE's imported widget manifest.
 
-The companion must keep running to control Sonar and the music player.
-It uses an automatic loopback-only connection on this PC. You do not enter
-an IP address, choose a port, or host a website. This local connection is
-required for the iCUE iframe version; the standalone desktop view uses its
-native control bridge instead.
+Keep Sonar Edge running to control Sonar and your music player. One app and
+one tray icon serve both the desktop window and the iCUE widget.
+Minimizing or closing the window hides it from the taskbar; iCUE keeps working.
+Double-click the tray icon, or choose Open Sonar Edge, to restore the window.
+Choose Exit Sonar Edge from the tray menu to quit the whole app.
+The bottom gear opens Settings. Window & display contains fullscreen and
+monitor placement controls. Both views share layouts, backgrounds and audio
+controls in LocalAppData\SonarEdge.
 
-Each person installing the shared ZIP runs their own local companion.
-No music, settings, or controls are sent to another person's PC.
-The widget and desktop app share customization in LocalAppData\SonarEdge.
-Meters, ChatMix, artwork effects, progress, seeking, and music player volume
-use the same controls in either view. The player must support those controls;
-MusicBee progress and volume use the included MusicBee helper.
-
-Choose "Open SonarEdge.exe as: iCUE iframe" and Save changes to make the
-companion your default. To change back, use Open desktop from the companion
-tray or the iframe's App version page, then save Desktop as your default.
-The normal Sonar Edge shortcut follows your saved default. Change it in
-Customize > App version; the installer creates only this one Start menu entry.
-In the portable ZIP, "Choose app version.vbs" opens the choice screen, even
-if iCUE is the saved default, and Start iCUE companion.vbs starts the companion
-directly. No installer is required for the portable ZIP.
-
-To run the companion without installing shortcuts, use Start iCUE companion.vbs.
-To exit it, right-click its system-tray icon and choose Exit companion.
+Each person installing Sonar Edge controls only their own PC. The local iCUE
+connection needs no address entry or external hosting.
 
 Optional: the exact HTML for iCUE's built-in iFrame widget is:
 <iframe src="http://127.0.0.1:47832/embed" title="Sonar Edge" style="position:fixed;inset:0;width:100%;height:100%;border:0;margin:0;" allow="fullscreen"></iframe>

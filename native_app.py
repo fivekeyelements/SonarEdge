@@ -1,4 +1,4 @@
-"""Sonar Edge desktop entry point. Local files + native bridge; no HTTP listener."""
+"""One Sonar Edge app: desktop window, system tray and local iCUE widget controls."""
 import argparse
 import asyncio
 import copy
@@ -39,6 +39,7 @@ _dpi.SetProcessDpiAwarenessContext(ctypes.c_void_p(-4))
 import webview
 import server as core
 from window_controls import WindowControls
+from desktop_tray import DesktopTray
 from display_selection import startup_display
 from app_versions import AppVersions, launch_version
 from windows_startup import WindowsStartup
@@ -237,102 +238,35 @@ class NativeAPI:
 
 
 _mutex = None
-_choose_event = None
+_instance_events = {}
 
 
-def single_instance(widget=False, choose=False):
-    global _mutex, _choose_event
+def single_instance(widget=False, choose=False, silent=False):
+    global _mutex
     kernel = ctypes.WinDLL('kernel32', use_last_error=True)
     kernel.CreateMutexW.argtypes = [ctypes.c_void_p, ctypes.c_bool, ctypes.c_wchar_p]
     kernel.CreateMutexW.restype = ctypes.c_void_p
-    if not widget:
-        kernel.CreateEventW.argtypes = [ctypes.c_void_p, ctypes.c_bool, ctypes.c_bool, ctypes.c_wchar_p]
-        kernel.CreateEventW.restype = ctypes.c_void_p
-        _choose_event = kernel.CreateEventW(None, False, False, 'Local\\SonarEdge.ChooseVersion.v1')
-    _mutex = kernel.CreateMutexW(None, False, 'Local\\SonarEdge.Widget.v1' if widget else 'Local\\SonarEdge.Desktop.v1')
+    kernel.CreateEventW.argtypes = [ctypes.c_void_p, ctypes.c_bool, ctypes.c_bool, ctypes.c_wchar_p]
+    kernel.CreateEventW.restype = ctypes.c_void_p
+    for mode, name in (('desktop', 'ShowDesktop'), ('iframe', 'ShowWidget'), ('choose', 'ChooseVersion')):
+        _instance_events[mode] = kernel.CreateEventW(None, False, False, 'Local\\SonarEdge.' + name + '.v1')
+    _mutex = kernel.CreateMutexW(None, False, 'Local\\SonarEdge.App.v1')
     if ctypes.get_last_error() == 183:
-        if widget:
-            return False
-        if choose and _choose_event:
-            kernel.SetEvent.argtypes = [ctypes.c_void_p]
-            kernel.SetEvent(_choose_event)
-        user = ctypes.WinDLL('user32')
-        user.FindWindowW.argtypes = [ctypes.c_wchar_p, ctypes.c_wchar_p]
-        user.FindWindowW.restype = ctypes.c_void_p
-        hwnd = user.FindWindowW(None, APP_NAME)
-        if hwnd:
-            user.ShowWindow(ctypes.c_void_p(hwnd), 9)
-            user.SetForegroundWindow(ctypes.c_void_p(hwnd))
+        mode = 'choose' if choose else 'iframe' if widget else 'desktop'
+        kernel.SetEvent.argtypes = [ctypes.c_void_p]
+        if not silent:
+            kernel.SetEvent(_instance_events[mode])
         return False
+    if not _mutex or not all(_instance_events.values()):
+        raise ctypes.WinError(ctypes.get_last_error())
     return True
-
-
-def run_widget_companion(bridge):
-    """Optional iCUE mode. The widget owns its view; this process supplies controls."""
-    from http.server import ThreadingHTTPServer
-    import subprocess
-    import clr
-    clr.AddReference('System.Windows.Forms')
-    clr.AddReference('System.Drawing')
-    from System.Drawing import Icon
-    from System.Windows.Forms import Application, ContextMenuStrip, NotifyIcon, ToolStripMenuItem, Control
-    from System import Action
-
-    # The desktop app never calls this function. Only --widget opens this listener.
-    listener = ThreadingHTTPServer(('127.0.0.1', core.PORT), core.Handler)
-    threading.Thread(target=listener.serve_forever, daemon=True, name='SonarEdge-iCUE').start()
-    Application.EnableVisualStyles()
-    tray = NotifyIcon()
-    tray.Icon = Icon.ExtractAssociatedIcon(sys.executable)
-    tray.Text = 'Sonar Edge for iCUE'
-    menu = ContextMenuStrip()
-    controls = ToolStripMenuItem('Open Sonar Edge')
-    def show_controls(sender, event):
-        bridge.app_versions.perform({'action': 'open', 'mode': 'desktop'})
-    controls.Click += show_controls
-    menu.Items.Add(controls)
-    versions = ToolStripMenuItem('Choose app version')
-    def choose_version(sender, event):
-        environment = os.environ.copy()
-        environment.pop('SONAR_EDGE_WIDGET_PORT', None)
-        environment['PYINSTALLER_RESET_ENVIRONMENT'] = '1'
-        subprocess.Popen([*bridge.app_versions.command, '--choose'], env=environment,
-                         creationflags=subprocess.CREATE_NO_WINDOW)
-    versions.Click += choose_version
-    menu.Items.Add(versions)
-    widget_file = ToolStripMenuItem('Find XL widget for iCUE')
-    widget_file.Enabled = bridge.app_versions.info()['widgetAvailable']
-    widget_file.Click += lambda sender, event: bridge.app_versions.perform({'action': 'widget'})
-    menu.Items.Add(widget_file)
-    quit_item = ToolStripMenuItem('Exit companion')
-    def quit_companion(sender, event):
-        tray.Visible = False
-        listener.shutdown()
-        Application.ExitThread()
-    quit_item.Click += quit_companion
-    menu.Items.Add(quit_item)
-    tray.ContextMenuStrip = menu
-    tray.Visible = True
-    dispatcher = Control()
-    _ = dispatcher.Handle
-    app_shutdown.listen(lambda: dispatcher.BeginInvoke(Action(lambda: quit_companion(None, None))))
-    logging.info('iCUE companion ready; loopback-only widget connection')
-    try:
-        Application.Run()
-    finally:
-        tray.Visible = False
-        tray.Dispose()
-        dispatcher.Dispose()
-        listener.server_close()
-        bridge.meters.stop()
-        bridge.loop.call_soon_threadsafe(bridge.loop.stop)
 
 
 def main():
     parser = argparse.ArgumentParser(description=APP_NAME)
     parser.add_argument('--edge', action='store_true', help='Prefer the Xeneon Edge (the default)')
     parser.add_argument('--windowed', action='store_true', help='Open a normal window for this launch')
-    parser.add_argument('--widget', action='store_true', help='Run the iCUE widget companion in the system tray')
+    parser.add_argument('--widget', action='store_true', help='Keep Sonar Edge in the system tray for iCUE')
     parser.add_argument('--desktop', action='store_true', help='Open the standalone desktop version')
     parser.add_argument('--choose', action='store_true', help='Choose the desktop or iCUE iframe version')
     parser.add_argument('--startup', action='store_true', help='Start the saved version after Windows sign-in')
@@ -347,9 +281,8 @@ def main():
     mode = launch_version(DATA_DIR, widget=args.widget,
                           desktop=args.desktop or args.edge or args.windowed or args.choose or bool(args.diagnose))
     widget = mode == 'iframe'
-    if widget:
-        core.PORT = 47832
-    if not args.diagnose and not single_instance(widget=widget, choose=args.choose):
+    core.PORT = 47832
+    if not args.diagnose and not single_instance(widget=args.widget, choose=args.choose, silent=args.startup):
         return
     # Initialize the shared CLR image runtime before WebView2/tray startup and
     # background artwork decoding can race to initialize it on different threads.
@@ -368,8 +301,6 @@ def main():
     threading.Thread(target=bridge.run, daemon=True, name='SonarEdge-Audio').start()
     bridge.ready.wait(5)
     api = NativeAPI(bridge)
-    if widget and not args.diagnose:
-        return run_widget_companion(bridge)
     if args.diagnose:
         async def collect():
             async with bridge.sonar_lock:
@@ -394,37 +325,51 @@ def main():
     edge_index, edge = startup_display(screens, bridge.preferences.get('autoEdge', True), args.windowed)
     options = {'screen': edge} if edge is not None else {}
     window = webview.create_window(APP_NAME, url=prepare_ui(args.choose or not (DATA_DIR / 'app-version.json').exists()), js_api=api, width=1600, height=510,
-                                   min_size=(960, 310), background_color='#101318', text_select=False, **options)
+                                   min_size=(960, 310), background_color='#101318', text_select=False, hidden=widget, **options)
     api._window = window
     api._controls = WindowControls(window)
+    tray_icon = Path(sys.executable) if getattr(sys, 'frozen', False) else ASSETS / 'assets/SonarEdge.ico'
+    desktop_tray = DesktopTray(window, tray_icon,
+        on_view=lambda view: setattr(bridge.app_versions, 'current', view),
+        find_widget=lambda: bridge.app_versions.perform({'action': 'widget'}))
+    bridge.app_versions.open_view = lambda view: api._controls._ui(
+        lambda form: desktop_tray.restore() if view == 'desktop' else desktop_tray.hide())
+    window.events.before_show += desktop_tray.attach
     if edge is not None:
         def open_on_edge():
             result = api.window_action('move', {'display': edge_index, 'fullscreen': True})
             if result['ok']:
                 logging.info('Opened automatically on Xeneon Edge (%s x %s)', edge.width, edge.height)
         window.events.loaded += open_on_edge
-    window.events.loaded += lambda: logging.info('Desktop interface loaded; native transport; no HTTP server')
-    window.events.loaded += lambda: app_shutdown.listen(window.destroy)
+    window.events.loaded += lambda: logging.info('Sonar Edge interface loaded; shared desktop and iCUE controls')
+    window.events.loaded += lambda: app_shutdown.listen(lambda: api._controls._ui(lambda form: desktop_tray.exit()))
     closing = threading.Event()
-    def listen_for_choice():
-        if not _choose_event:
-            return
+    def listen_for_views():
         kernel = ctypes.WinDLL('kernel32')
         kernel.WaitForSingleObject.argtypes = [ctypes.c_void_p, ctypes.c_uint32]
         while not closing.is_set():
-            if kernel.WaitForSingleObject(_choose_event, 500) == 0:
-                try:
-                    window.evaluate_js('void openSettings("version")')
-                except Exception:
-                    logging.exception('Could not show the app version chooser')
-    window.events.loaded += lambda: threading.Thread(target=listen_for_choice, daemon=True,
-                                                     name='SonarEdge-VersionChoice').start()
+            for mode, event in _instance_events.items():
+                if kernel.WaitForSingleObject(event, 0) == 0:
+                    try:
+                        bridge.app_versions.open_view('desktop' if mode == 'choose' else mode)
+                        if mode == 'choose':
+                            window.evaluate_js('void openSettings("version")')
+                    except Exception:
+                        logging.exception('Could not open the requested Sonar Edge view')
+            closing.wait(.2)
+    window.events.loaded += lambda: threading.Thread(target=listen_for_views, daemon=True,
+                                                     name='SonarEdge-Views').start()
+    from http.server import ThreadingHTTPServer
+    listener = ThreadingHTTPServer(('127.0.0.1', core.PORT), core.Handler)
+    threading.Thread(target=listener.serve_forever, daemon=True, name='SonarEdge-iCUE').start()
     logging.info('%s %s starting', APP_NAME, VERSION)
     try:
         webview.start(gui='edgechromium', http_server=False, private_mode=False,
                       storage_path=str(DATA_DIR / 'WebView2'))
     finally:
         closing.set()
+        listener.shutdown()
+        listener.server_close()
         bridge.meters.stop()
         bridge.loop.call_soon_threadsafe(bridge.loop.stop)
 

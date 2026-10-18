@@ -53,6 +53,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Unit tests failed' }
           node --check web/app.js
           if ($LASTEXITCODE -ne 0) { throw 'JavaScript syntax check failed' }
+          node --check web/native.js
+          if ($LASTEXITCODE -ne 0) { throw 'Native JavaScript syntax check failed' }
           node test_visuals.cjs
           if ($LASTEXITCODE -ne 0) { throw 'Artwork visual tests failed' }
           node test_widget_fit.cjs

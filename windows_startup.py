@@ -12,7 +12,7 @@ import installation
 RUN_KEY = r'Software\Microsoft\Windows\CurrentVersion\Run'
 VALUE_NAME = 'Sonar Edge'
 PACKAGE_FILES = ('Sonar Edge XL.icuewidget', 'Read me.txt', 'iCUE XL setup.txt',
-                 'THIRD-PARTY-NOTICES.txt', 'Choose app version.vbs', 'Start iCUE companion.vbs')
+                 'THIRD-PARTY-NOTICES.txt')
 
 
 class WindowsStartup:

@@ -42,28 +42,23 @@ if(window.SONAR_EDGE_NATIVE){
     if(e.key==='F11'){e.preventDefault();if(!e.repeat)nativeWindow('fullscreen');}
     else if(e.key==='Escape'&&document.querySelector('#overlay')?.hidden)nativeWindow('leave_fullscreen');
   });
-  queueMicrotask(()=>{
-    const button=document.createElement('button');button.className='icon-button quiet';button.title='Display';button.setAttribute('aria-label','Choose display');
-    button.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>';
-    document.querySelector('#fullscreen').before(button);
-    button.addEventListener('click',async()=>{
-      const info=await nativeWindow('displays');if(!info)return;
-      openSheet('Display','SONAR EDGE');
-      document.querySelector('#sheet-content').innerHTML=`<div class="player-picker-list">${info.displays.map(d=>`<button class="player-choice" data-display-id="${d.id}"><span>${esc(d.name)}</span><span class="eyebrow">${d.width} × ${d.height}</span></button>`).join('')}</div><label class="check"><input id="display-fullscreen" type="checkbox" checked>Fullscreen on selected display</label><label class="check"><input id="display-top" type="checkbox"${info.onTop?' checked':''}>Always on top</label><label class="check"><input id="display-auto-edge" type="checkbox"${preferences.autoEdge!==false?' checked':''}>Open on Xeneon Edge automatically</label>`;
-      document.querySelectorAll('[data-display-id]').forEach(b=>b.addEventListener('click',async()=>{
-        const result=await nativeWindow('move',{display:Number(b.dataset.displayId),fullscreen:document.querySelector('#display-fullscreen').checked});if(result)closeSheet();
-      }));
-      document.querySelector('#display-top').addEventListener('change',async e=>{
-        const input=e.target,previous=!input.checked;input.disabled=true;
-        const result=await nativeWindow('on_top',{value:input.checked});
-        input.checked=result?result.onTop:previous;input.disabled=false;
-      });
-      document.querySelector('#display-auto-edge').addEventListener('change',async e=>{
-        const input=e.target,previous=!input.checked;input.disabled=true;
-        try{preferences=await execute('/api/preferences',{...preferences,autoEdge:input.checked});}
-        catch{input.checked=previous;}
-        finally{input.disabled=false;}
-      });
-    });
+}
+
+async function renderWindowSettings(){
+  const host=document.querySelector('#window-settings');
+  let info;
+  try{info=await nativeApi('window_action','displays',{});}
+  catch(error){if(host?.isConnected)host.textContent=error.message;return;}
+  if(!host?.isConnected)return;
+  host.innerHTML=`<div class="update-buttons"><button class="button secondary" id="window-fullscreen">${info.fullscreen?'Leave fullscreen':'Fullscreen'}</button><button class="button secondary" id="window-minimize">Minimize to tray</button></div><h3>Display</h3><div class="player-picker-list">${info.displays.map(d=>`<button class="player-choice" data-display-id="${d.id}"><span>${esc(d.name)}</span><span class="eyebrow">${d.width} × ${d.height}</span></button>`).join('')}</div><label class="check"><input id="display-fullscreen" type="checkbox" checked>Fullscreen on selected display</label><label class="check"><input id="display-top" type="checkbox"${info.onTop?' checked':''}>Always on top</label><label class="check"><input id="display-auto-edge" type="checkbox"${draft.autoEdge!==false?' checked':''}>Open on Xeneon Edge automatically</label>`;
+  document.querySelector('#window-fullscreen').addEventListener('click',async()=>{await nativeWindow('fullscreen');renderWindowSettings();});
+  document.querySelector('#window-minimize').addEventListener('click',()=>{closeSheet();nativeWindow('minimize');});
+  host.querySelectorAll('[data-display-id]').forEach(b=>b.addEventListener('click',async()=>{
+    await nativeWindow('move',{display:Number(b.dataset.displayId),fullscreen:document.querySelector('#display-fullscreen').checked});
+  }));
+  document.querySelector('#display-top').addEventListener('change',async e=>{
+    const input=e.target,previous=!input.checked;input.disabled=true;
+    const result=await nativeWindow('on_top',{value:input.checked});input.checked=result?result.onTop:previous;input.disabled=false;
   });
+  document.querySelector('#display-auto-edge').addEventListener('change',e=>{draft.autoEdge=e.target.checked;});
 }

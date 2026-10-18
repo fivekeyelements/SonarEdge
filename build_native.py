@@ -60,7 +60,7 @@ if python_license.exists():
 
 archive = ROOT / 'releases' / (RELEASE.name + '.zip')
 allowed = {'SonarEdge.exe', 'Read me.txt', 'THIRD-PARTY-NOTICES.txt', 'Sonar Edge XL.icuewidget',
-           'iCUE XL setup.txt', 'Start iCUE companion.vbs', 'Choose app version.vbs'}
+           'iCUE XL setup.txt'}
 with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as z:
     for file in RELEASE.rglob('*'):
         relative = file.relative_to(RELEASE)

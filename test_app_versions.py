@@ -38,15 +38,14 @@ class AppVersionTests(unittest.TestCase):
         for request in ({'action':'open','mode':'anything.exe'},{'action':'default','mode':'bad'},{'action':'shell'}):
             with self.assertRaises(ValueError):self.modes.perform(request)
 
-    def test_each_version_launches_an_explicit_mode_without_shell_or_port_inheritance(self):
-        with patch.object(versions.subprocess,'Popen') as launch,patch.dict(versions.os.environ,{'SONAR_EDGE_WIDGET_PORT':'1234'}):
-            for mode,argument in [('desktop','--desktop'),('iframe','--widget')]:
+    def test_both_views_use_the_existing_app_without_launching_another_process(self):
+        self.modes.open_view=Mock()
+        with patch.object(versions.subprocess,'Popen') as launch:
+            for mode in ('desktop','iframe'):
                 self.modes.perform({'action':'open','mode':mode})
-                args,kwargs=launch.call_args
-                self.assertEqual(args[0],['C:/Sonar Edge/SonarEdge.exe',argument])
-                self.assertNotIn('SONAR_EDGE_WIDGET_PORT',kwargs['env'])
-                self.assertEqual(kwargs['env']['PYINSTALLER_RESET_ENVIRONMENT'],'1')
-                self.assertFalse(kwargs.get('shell',False))
+                self.modes.open_view.assert_called_with(mode)
+                self.assertEqual(self.modes.info()['current'],mode)
+            launch.assert_not_called()
 
     def test_widget_actions_only_open_bundled_files(self):
         with self.assertRaises(ValueError):self.modes.perform({'action':'widget'})

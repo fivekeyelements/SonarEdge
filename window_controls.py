@@ -100,6 +100,8 @@ class WindowControls:
                 self._fullscreen(form, True, screen)
         elif action == 'on_top':
             self.window.on_top = bool(data.get('value'))
+        elif action == 'minimize':
+            form.WindowState = FormWindowState.Minimized
         else:
             raise ValueError('Unknown window action')
         return {'onTop': bool(form.TopMost), 'fullscreen': self._restore is not None}

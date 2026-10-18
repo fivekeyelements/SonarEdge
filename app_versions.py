@@ -26,11 +26,12 @@ def launch_version(data_dir, *, widget=False, desktop=False):
 
 
 class AppVersions:
-    def __init__(self, data_dir, package_dir, current='desktop', command=None, startup=None):
+    def __init__(self, data_dir, package_dir, current='desktop', command=None, startup=None, open_view=None):
         self.data_dir = Path(data_dir)
         self.package_dir = Path(package_dir)
         self.current = current
         self.startup = startup
+        self.open_view = open_view
         self.command = command or ([sys.executable] if getattr(sys, 'frozen', False)
                                   else [sys.executable, str(self.package_dir / 'native_app.py')])
 
@@ -63,13 +64,11 @@ class AppVersions:
             mode = data.get('mode')
             if mode not in ('desktop', 'iframe'):
                 raise ValueError('Choose Desktop or iCUE iframe')
-            environment = os.environ.copy()
-            environment.pop('SONAR_EDGE_WIDGET_PORT', None)
-            environment['PYINSTALLER_RESET_ENVIRONMENT'] = '1'
-            subprocess.Popen([*self.command, '--widget' if mode == 'iframe' else '--desktop'],
-                             cwd=self.package_dir, env=environment,
-                             creationflags=subprocess.CREATE_NO_WINDOW)
-            return {'message': 'iCUE companion started. Add Sonar Edge XL in iCUE and choose XL.'
+            if self.open_view is None:
+                raise ValueError('The app window is still starting. Try again.')
+            self.open_view(mode)
+            self.current = mode
+            return {'message': 'Sonar Edge is running in the tray. Add Sonar Edge XL in iCUE and choose XL.'
                     if mode == 'iframe' else 'Desktop opened. In iCUE, use Screen Setup > Desktop.'}
         if action in ('widget', 'guide'):
             file = self.package_dir / ('Sonar Edge XL.icuewidget' if action == 'widget' else 'iCUE XL setup.txt')

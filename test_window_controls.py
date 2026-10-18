@@ -51,7 +51,7 @@ class WindowTests(unittest.TestCase):
         modules = {'System': NS(Action=lambda callback: callback),
                    'System.Drawing': NS(Rectangle=lambda *coords: coords),
                    'System.Windows.Forms': NS(Screen=NS(AllScreens=self.screens, FromControl=lambda form:self.screens[1]),
-                                              FormBorderStyle=NS(**{'None':'none'}), FormWindowState=NS(Normal='normal'))}
+                                              FormBorderStyle=NS(**{'None':'none'}), FormWindowState=NS(Normal='normal',Minimized='minimized'))}
         self.module_patch = patch.dict(sys.modules, modules)
         self.module_patch.start()
         self.frame_patch = patch.object(self.controls, '_frame')
@@ -95,6 +95,14 @@ class WindowTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.controls.perform('move', {'display':99})
         self.assertEqual(self.form.Bounds, original)
+
+    def test_minimize_preserves_fullscreen_bounds_for_tray_restore(self):
+        self.controls.perform('fullscreen')
+        bounds = self.form.Bounds
+        self.controls.perform('minimize')
+        self.assertEqual(self.form.WindowState, 'minimized')
+        self.assertIs(self.form.Bounds, bounds)
+        self.assertTrue(self.window.fullscreen)
 
 
 if __name__ == '__main__':

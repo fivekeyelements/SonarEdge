@@ -9,19 +9,21 @@ Developed by **Kagi Software**.
 Run the Setup EXE to install for your Windows account. It adds one Sonar Edge
 Start menu shortcut, an optional desktop shortcut and Windows startup entry,
 and an entry in Installed apps.
-Choose Desktop or iCUE in **Customize → App version**. Import the included
+Choose Desktop or iCUE in **Settings → App version**. Import the included
 `Sonar Edge XL.icuewidget` in iCUE and choose XL to fill its dashboard area.
 
 - Sonar channel volumes, mute, devices, EQ presets, live activity meters, and ChatMix
 - MusicBee controls, artwork, progress, seeking, and player volume with the included helper
 - Other music apps through Windows media controls
 - Custom backgrounds, album colors, optional animated blur, readable text, and configurable buttons
+- Minimize the desktop window to the system tray; reopen or exit from its tray icon
 - User-initiated GitHub update checks and verified installer downloads
 
 SteelSeries GG/Sonar and your media player must be installed separately. iCUE
 is required for the widget view. Sonar Edge automatically reconnects as those
-apps become available. The desktop view uses a native bridge; the iCUE view
-uses a companion on this PC, with no address entry or external hosting.
+apps become available. One running app and one tray icon serve both views, with no address entry
+or external hosting. Minimize or close the window to keep iCUE working;
+choose Exit Sonar Edge from the tray to quit. The bottom gear opens Settings.
 
 Uninstall through **Windows Settings → Apps → Installed apps → Sonar Edge**.
 The uninstaller removes the app, its shortcuts, and its startup entry; it lets

@@ -24,7 +24,7 @@ def verify():
         with zipfile.ZipFile(io.BytesIO(package.read(f'{NAME}/Sonar Edge XL.icuewidget'))) as widget:
             manifest = json.loads(widget.read('manifest.json'))
             assert manifest.get('interactive') is True, 'The iCUE widget must receive touch/click input'
-        assert f'{NAME}/Choose app version.vbs' in names
+        assert not any(name.lower().endswith('.vbs') for name in names), 'One app needs no separate launch scripts'
         assert not any(Path(name).name in ('preferences.json', 'app-version.json', 'interface.html', 'runtime.log', 'sonar-edge.log')
                        or '/backgrounds/' in name or '/artwork/' in name for name in names)
     with tempfile.TemporaryDirectory(prefix='SonarEdge-check-') as folder:

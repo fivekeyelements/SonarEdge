@@ -114,10 +114,10 @@ begin
   Signal := CreateEvent(0, True, False, 'Local\SonarEdge.Exit.v1');
   if Signal <> 0 then SetEvent(Signal);
   I := 0;
-  while CheckForMutexes('Local\SonarEdge.Desktop.v1,Local\SonarEdge.Widget.v1') and (I < 150) do begin
+  while CheckForMutexes('Local\SonarEdge.App.v1,Local\SonarEdge.Desktop.v1,Local\SonarEdge.Widget.v1') and (I < 150) do begin
     Sleep(100); I := I + 1;
   end;
-  Result := not CheckForMutexes('Local\SonarEdge.Desktop.v1,Local\SonarEdge.Widget.v1');
+  Result := not CheckForMutexes('Local\SonarEdge.App.v1,Local\SonarEdge.Desktop.v1,Local\SonarEdge.Widget.v1');
   if Signal <> 0 then CloseHandle(Signal);
 end;
 
