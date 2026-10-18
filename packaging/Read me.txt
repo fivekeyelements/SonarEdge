@@ -1,8 +1,8 @@
-SONAR EDGE 1.0.0
+SONAR EDGE 1.0.1
 Windows desktop audio controls
 
 START
-Run SonarEdge-Setup-1.0.0-Windows-x64.exe to install Sonar Edge.
+Run SonarEdge-Setup-1.0.1-Windows-x64.exe to install Sonar Edge.
 The installer adds it to Windows Installed apps and your Start menu.
 A portable ZIP is also available; extract it and open SonarEdge.exe.
 On first launch, choose Desktop or iCUE iframe in Customize > App version.
@@ -124,8 +124,8 @@ Export/import transfers settings as JSON. Copy the backgrounds subfolder as
 well if you want those uploaded images/videos on another PC.
 
 SHARE
-Send this original ZIP, or SonarEdge.exe, to another Windows 10/11 x64 user.
-Use the ZIP if they might need the optional installer or WebView2 bootstrapper.
+Send the Setup EXE, the original ZIP, or SonarEdge.exe to another Windows 10/11
+x64 user. Send the Setup EXE if they need installation or the WebView2 runtime.
 Each person has independent settings. The original release contains no personal
 settings, backgrounds, music library, artwork, account information, or logs.
 They need their own SteelSeries GG/Sonar and media player installed.

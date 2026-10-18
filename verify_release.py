@@ -1,5 +1,6 @@
 """Check the share package and optionally update this checkout's desktop links."""
 import argparse
+import io
 import json
 import os
 from pathlib import Path
@@ -20,6 +21,9 @@ def verify():
         names = package.namelist()
         assert f'{NAME}/SonarEdge.exe' in names
         assert f'{NAME}/Sonar Edge XL.icuewidget' in names
+        with zipfile.ZipFile(io.BytesIO(package.read(f'{NAME}/Sonar Edge XL.icuewidget'))) as widget:
+            manifest = json.loads(widget.read('manifest.json'))
+            assert manifest.get('interactive') is True, 'The iCUE widget must receive touch/click input'
         assert f'{NAME}/Choose app version.vbs' in names
         assert not any(Path(name).name in ('preferences.json', 'app-version.json', 'interface.html', 'runtime.log', 'sonar-edge.log')
                        or '/backgrounds/' in name or '/artwork/' in name for name in names)
