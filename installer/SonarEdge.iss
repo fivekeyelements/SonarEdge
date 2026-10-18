@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "1.0.1"
+  #define AppVersion "1.0.0"
 #endif
 #ifndef AppId
   #define AppId "SonarEdge"
@@ -22,7 +22,7 @@
 AppId={#AppId}
 AppName={#ProductName}
 AppVersion={#AppVersion}
-AppPublisher=Sonar Edge
+AppPublisher=tagmori
 AppPublisherURL=https://github.com/fivekeyelements/SonarEdge
 AppSupportURL=https://github.com/fivekeyelements/SonarEdge/issues
 AppUpdatesURL=https://github.com/fivekeyelements/SonarEdge/releases
@@ -40,6 +40,7 @@ UninstallDisplayIcon={app}\SonarEdge.exe
 UninstallDisplayName={#ProductName}
 VersionInfoVersion={#AppVersion}
 VersionInfoProductName={#ProductName} Setup
+VersionInfoCompany=tagmori
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern

@@ -23,7 +23,7 @@ namespace MusicBeePlugin {
             public PluginType Type = PluginType.General;
             public string Name = "Sonar Edge";
             public string Description = "Playback progress, seeking and player volume for Sonar Edge.";
-            public string Author = "Sonar Edge";
+            public string Author = "tagmori";
             public string TargetApplication = "";
             public short VersionMajor = 1, VersionMinor = 4, Revision = 0;
             public short MinInterfaceVersion = 41, MinApiRevision = 53;

@@ -1,8 +1,9 @@
-SONAR EDGE 1.0.1
+SONAR EDGE 1.0.0
 Windows desktop audio controls
+Developed by tagmori
 
 START
-Run SonarEdge-Setup-1.0.1-Windows-x64.exe to install Sonar Edge.
+Run SonarEdge-Setup-1.0.0-Windows-x64.exe to install Sonar Edge.
 The installer adds it to Windows Installed apps and your Start menu.
 A portable ZIP is also available; extract it and open SonarEdge.exe.
 On first launch, choose Desktop or iCUE iframe in Customize > App version.
