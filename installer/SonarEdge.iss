@@ -69,12 +69,12 @@ Name: "{userprograms}\{#ProductName}"; Filename: "{app}\SonarEdge.exe"; WorkingD
 Name: "{autodesktop}\Sonar Edge"; Filename: "{app}\SonarEdge.exe"; WorkingDir: "{app}"; Tasks: desktopicon
 
 [InstallDelete]
-Type: files; Name: "{group}\Sonar Edge.lnk"
-Type: files; Name: "{group}\Sonar Edge Desktop.lnk"
-Type: files; Name: "{group}\Sonar Edge for iCUE.lnk"
-Type: files; Name: "{group}\Choose app version.lnk"
-Type: files; Name: "{group}\iCUE XL setup.lnk"
-Type: dirifempty; Name: "{group}"
+Type: files; Name: "{userprograms}\{#ProductName}\Sonar Edge.lnk"
+Type: files; Name: "{userprograms}\{#ProductName}\Sonar Edge Desktop.lnk"
+Type: files; Name: "{userprograms}\{#ProductName}\Sonar Edge for iCUE.lnk"
+Type: files; Name: "{userprograms}\{#ProductName}\Choose app version.lnk"
+Type: files; Name: "{userprograms}\{#ProductName}\iCUE XL setup.lnk"
+Type: dirifempty; Name: "{userprograms}\{#ProductName}"
 #if AppId == "SonarEdge"
 Type: files; Name: "{autodesktop}\Sonar Edge for iCUE.lnk"
 #endif

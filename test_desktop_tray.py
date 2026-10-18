@@ -22,7 +22,8 @@ class Event:
 
 class TrayTests(unittest.TestCase):
     def setUp(self):
-        self.form = NS(WindowState='normal', IsDisposed=False, ShowInTaskbar=True, Resize=Event(), FormClosed=Event(), FormClosing=Event(),
+        self.form = NS(WindowState='normal', IsDisposed=False, IsHandleCreated=True,
+                       StyleChanged=Event(), HandleCreated=Event(), Resize=Event(), FormClosed=Event(), FormClosing=Event(),
                        Hide=Mock(), Show=Mock(), BringToFront=Mock(), Activate=Mock())
         self.window = NS(native=self.form, destroy=Mock(side_effect=self.form.FormClosed.fire))
         self.icon = Mock()
@@ -37,6 +38,9 @@ class TrayTests(unittest.TestCase):
         self.patch = patch.dict(sys.modules, modules)
         self.patch.start()
         self.addCleanup(self.patch.stop)
+        self.style_patch = patch('desktop_tray.hide_from_taskbar')
+        self.hide_taskbar = self.style_patch.start()
+        self.addCleanup(self.style_patch.stop)
         self.tray = DesktopTray(self.window, Path('SonarEdge.ico'))
 
     def test_minimize_and_restore_preserve_normal_or_maximized_state(self):
@@ -52,7 +56,7 @@ class TrayTests(unittest.TestCase):
             self.assertEqual(self.form.WindowState, state)
             self.form.Show.assert_called()
             self.form.Activate.assert_called()
-            self.assertFalse(self.form.ShowInTaskbar)
+            self.hide_taskbar.assert_called_with(self.form)
 
     def test_open_menu_restores_and_exit_disposes_the_tray(self):
         self.tray.attach()
@@ -84,7 +88,17 @@ class TrayTests(unittest.TestCase):
         self.form.Hide.assert_not_called()
         self.assertFalse(self.notify.Visible)
         self.notify.Dispose.assert_called_once()
-        self.assertTrue(self.form.ShowInTaskbar)
+        self.hide_taskbar.assert_not_called()
+
+    def test_taskbar_style_is_reapplied_after_fullscreen_or_handle_changes(self):
+        self.tray.attach()
+        self.hide_taskbar.reset_mock()
+        self.form.StyleChanged.fire()
+        self.form.HandleCreated.fire()
+        self.assertEqual(self.hide_taskbar.call_count, 2)
+        self.tray.dispose()
+        self.form.StyleChanged.fire()
+        self.assertEqual(self.hide_taskbar.call_count, 2)
 
     def test_close_hides_the_window_but_explicit_exit_and_windows_shutdown_can_quit(self):
         self.tray.attach()

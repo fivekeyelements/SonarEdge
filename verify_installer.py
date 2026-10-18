@@ -67,7 +67,7 @@ def verify():
             saved=profile/'preferences.json'
             saved.write_text('{"custom":"keep my layout"}','utf-8')
             with winreg.OpenKey(winreg.HKEY_CURRENT_USER,RUN_KEY,0,winreg.KEY_SET_VALUE) as key:winreg.DeleteValue(key,RUN_NAME)
-            run([*common,'/UPDATE=1','/NOICONS',f'/LOG={location/"upgrade.log"}'])
+            run([*common,'/UPDATE=1','/NOICONS','/GROUP=Unused old group',f'/LOG={location/"upgrade.log"}'])
             assert shortcut.is_file(),'Upgrade did not repair the direct Start menu shortcut'
             assert not menu.exists(),'Upgrade left redundant Start menu shortcuts'
             assert read_value(RUN_KEY,RUN_NAME) is None,'An update re-enabled disabled startup'

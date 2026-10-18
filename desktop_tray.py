@@ -1,5 +1,23 @@
 """Desktop tray lifecycle. All callbacks run on the owning WinForms UI thread."""
+import ctypes
 from pathlib import Path
+
+
+def hide_from_taskbar(form):
+    # ShowInTaskbar's setter recreates the WinForms HWND, aborting WebView2's
+    # initialization. Change just the existing window's shell styles instead.
+    user = ctypes.WinDLL('user32', use_last_error=True)
+    user.GetWindowLongW.argtypes = [ctypes.c_void_p, ctypes.c_int]
+    user.GetWindowLongW.restype = ctypes.c_long
+    user.SetWindowLongW.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_long]
+    user.SetWindowLongW.restype = ctypes.c_long
+    handle = form.Handle.ToInt64()
+    style = user.GetWindowLongW(handle, -20)
+    hidden_style = (style & ~0x00040000) | 0x00000080  # APPWINDOW off, TOOLWINDOW on.
+    if style != hidden_style:
+        ctypes.set_last_error(0)
+        if not user.SetWindowLongW(handle, -20, hidden_style) and ctypes.get_last_error():
+            raise ctypes.WinError(ctypes.get_last_error())
 
 
 class DesktopTray:
@@ -41,9 +59,10 @@ class DesktopTray:
             self.tray.ContextMenuStrip = self.menu
             self.tray.DoubleClick += self.restore
             self.tray.Visible = True
-            # The tray is the app's permanent entry point, including while the
-            # desktop window is open. Set this before the first window Show.
-            form.ShowInTaskbar = False
+            # Reapply after fullscreen/style changes without replacing the HWND.
+            form.StyleChanged += self.keep_off_taskbar
+            form.HandleCreated += self.keep_off_taskbar
+            self.keep_off_taskbar()
             # Install the hide handler only after a usable tray icon exists.
             form.Resize += self.on_resize
             form.FormClosed += self.dispose
@@ -51,6 +70,11 @@ class DesktopTray:
         except Exception:
             self.dispose()
             raise
+
+    def keep_off_taskbar(self, *_):
+        form = self.window.native
+        if self.tray is not None and self.tray.Visible and not form.IsDisposed and form.IsHandleCreated:
+            hide_from_taskbar(form)
 
     def on_resize(self, *_):
         from System.Windows.Forms import FormWindowState
