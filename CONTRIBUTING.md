@@ -36,6 +36,12 @@ and starts Setup only after the user chooses Download & install. Drafts,
 prereleases, older versions, missing hashes, and mismatched assets are rejected.
 The updater's configured repository defaults to `fivekeyelements/SonarEdge`.
 
+Repeating a publish run for an already public version verifies that its three
+release files exist and skips publishing successfully. The workflow summary
+states that the existing downloads were kept; changes from that run are not
+published. An incomplete public release still fails for inspection. Draft
+releases can still receive their assets before being published.
+
 Do not commit personal preferences, album art, custom backgrounds, logs,
 downloaded installers, build output, credentials, or local runtime caches.
 The app is independent of SteelSeries, CORSAIR, and MusicBee. The MusicBee

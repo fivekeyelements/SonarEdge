@@ -94,9 +94,20 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Cannot read the release version' }
           $tag = "v$version"
           if ($env:GITHUB_REF -like 'refs/tags/*' -and $env:GITHUB_REF_NAME -ne $tag) { throw 'Tag must match app_version.py' }
-          $draft = gh release view $tag --json isDraft --jq .isDraft 2>$null
+          $releaseJson = gh release view $tag --json isDraft,assets 2>$null
           if ($LASTEXITCODE -eq 0) {
-            if ($draft -ne 'true') { throw 'This version is already public. Bump VERSION before publishing again.' }
+            $release = $releaseJson | ConvertFrom-Json
+            if (-not $release.isDraft) {
+              $expected = @("SonarEdge-Setup-$version-Windows-x64.exe", "SonarEdge-$version-Windows-x64.zip", 'SHA256SUMS.txt')
+              foreach ($name in $expected) {
+                $asset = @($release.assets | Where-Object { $_.name -eq $name })
+                if ($asset.Count -ne 1 -or $asset[0].size -le 0 -or $asset[0].state -ne 'uploaded') { throw "The public release is incomplete: $name. Inspect it before retrying." }
+              }
+              $message = "Sonar Edge $version is already published with all three release files. Publishing skipped; existing downloads are unchanged. Use a new version to publish further changes."
+              Write-Output $message
+              Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value $message
+              exit 0
+            }
             gh release upload $tag "releases/SonarEdge-Setup-$version-Windows-x64.exe" "releases/SonarEdge-$version-Windows-x64.zip" releases/SHA256SUMS.txt --clobber
             if ($LASTEXITCODE -ne 0) { throw 'Draft release upload failed' }
             gh release edit $tag --draft=false --latest --title "Sonar Edge $version"

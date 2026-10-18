@@ -86,8 +86,11 @@ class NativeTests(unittest.TestCase):
 
     def test_native_api_rejects_unknown_paths_and_methods(self):
         for method,path in [('GET','/arbitrary/file'),('POST','/api/background'),('DELETE','/api/preferences'),('GET','/api/launch')]:
-            result=self.api.call(method,path,{})
-            self.assertFalse(result['ok'])
+            with self.subTest(method=method,path=path):
+                with self.assertLogs(level='ERROR'):
+                    result=self.api.call(method,path,{})
+                self.assertFalse(result['ok'])
+                self.assertEqual(result['error'],'Unknown desktop operation')
 
     def test_state_artwork_uses_local_files_and_returns_a_copy(self):
         state=self.api.call('GET','/api/state',{})
