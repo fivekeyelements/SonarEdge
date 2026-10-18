@@ -6,8 +6,9 @@ Developed by **Kagi Software**.
 
 [Download the latest installer](https://github.com/fivekeyelements/SonarEdge/releases/latest)
 
-Run the Setup EXE to install for your Windows account. It adds Start menu
-shortcuts, an optional Windows startup entry, and an entry in Installed apps.
+Run the Setup EXE to install for your Windows account. It adds one Sonar Edge
+Start menu shortcut, an optional desktop shortcut and Windows startup entry,
+and an entry in Installed apps.
 Choose Desktop or iCUE in **Customize → App version**. Import the included
 `Sonar Edge XL.icuewidget` in iCUE and choose XL to fill its dashboard area.
 

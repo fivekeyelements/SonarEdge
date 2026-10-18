@@ -2,6 +2,7 @@
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 import time
@@ -12,6 +13,8 @@ ROOT=Path(__file__).resolve().parent
 UNINSTALL_KEY=r'Software\Microsoft\Windows\CurrentVersion\Uninstall\SonarEdgeInstallTest_is1'
 RUN_KEY=r'Software\Microsoft\Windows\CurrentVersion\Run'
 RUN_NAME='Sonar Edge Install Test'
+LEGACY_MENU_LINKS=('Sonar Edge Desktop.lnk','Sonar Edge for iCUE.lnk',
+                   'Choose app version.lnk','iCUE XL setup.lnk')
 
 
 def read_value(key,name):
@@ -52,12 +55,15 @@ def verify():
             assert read_value(UNINSTALL_KEY,'DisplayVersion')==VERSION
             assert read_value(RUN_KEY,RUN_NAME)==f'"{app}\\SonarEdge.exe" --startup'
             menu=Path(os.environ['APPDATA'])/'Microsoft/Windows/Start Menu/Programs/Sonar Edge Install Test'
-            assert all((menu/name).is_file() for name in ('Sonar Edge.lnk','Sonar Edge Desktop.lnk','Sonar Edge for iCUE.lnk','Choose app version.lnk'))
+            assert {p.name for p in menu.glob('*.lnk')}=={'Sonar Edge.lnk'},'Fresh install created extra Start menu shortcuts'
+            # Recreate the older installer's entries to exercise upgrade cleanup.
+            for name in LEGACY_MENU_LINKS:shutil.copy2(menu/'Sonar Edge.lnk',menu/name)
             profile.mkdir()
             saved=profile/'preferences.json'
             saved.write_text('{"custom":"keep my layout"}','utf-8')
             with winreg.OpenKey(winreg.HKEY_CURRENT_USER,RUN_KEY,0,winreg.KEY_SET_VALUE) as key:winreg.DeleteValue(key,RUN_NAME)
             run([*common,'/UPDATE=1',f'/LOG={location/"upgrade.log"}'])
+            assert {p.name for p in menu.glob('*.lnk')}=={'Sonar Edge.lnk'},'Upgrade left redundant Start menu shortcuts'
             assert read_value(RUN_KEY,RUN_NAME) is None,'An update re-enabled disabled startup'
             assert saved.read_text('utf-8')=='{"custom":"keep my layout"}'
             # Enable through the installer, then verify uninstall removes its entry.

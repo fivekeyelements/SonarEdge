@@ -65,14 +65,14 @@ Source: "..\packaging\MicrosoftEdgeWebview2Setup.exe"; DestDir: "{tmp}"; Flags: 
 
 [Icons]
 Name: "{group}\Sonar Edge"; Filename: "{app}\SonarEdge.exe"; WorkingDir: "{app}"
-Name: "{group}\Sonar Edge Desktop"; Filename: "{app}\SonarEdge.exe"; Parameters: "--desktop"; WorkingDir: "{app}"
-Name: "{group}\Sonar Edge for iCUE"; Filename: "{app}\SonarEdge.exe"; Parameters: "--widget"; WorkingDir: "{app}"
-Name: "{group}\Choose app version"; Filename: "{app}\SonarEdge.exe"; Parameters: "--choose"; WorkingDir: "{app}"
-Name: "{group}\iCUE XL setup"; Filename: "{app}\iCUE XL setup.txt"
 Name: "{autodesktop}\Sonar Edge"; Filename: "{app}\SonarEdge.exe"; WorkingDir: "{app}"; Tasks: desktopicon
 
-#if AppId == "SonarEdge"
 [InstallDelete]
+Type: files; Name: "{group}\Sonar Edge Desktop.lnk"
+Type: files; Name: "{group}\Sonar Edge for iCUE.lnk"
+Type: files; Name: "{group}\Choose app version.lnk"
+Type: files; Name: "{group}\iCUE XL setup.lnk"
+#if AppId == "SonarEdge"
 Type: files; Name: "{autodesktop}\Sonar Edge for iCUE.lnk"
 #endif
 

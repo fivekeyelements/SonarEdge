@@ -12,7 +12,7 @@ The normal EXE and Sonar Edge shortcut follow that choice on future launches.
 The Desktop version uses native controls and opens on your Xeneon Edge.
 Python and a browser tab are not needed.
 Both versions share your layout, music app, backgrounds, meters and ChatMix.
-Use "Choose app version.vbs" or --choose to return to the choice screen.
+Use Customize > App version to change modes at any time.
 
 START WITH WINDOWS
 Open Customize > App version, enable Start with Windows, and Save changes.
@@ -27,8 +27,8 @@ Sonar Edge reconnects as the audio apps become available. MusicBee controls
 connect when MusicBee is running. A short startup delay lets displays settle.
 
 iCUE XL WIDGET
-To run inside iCUE instead, start Start iCUE companion.vbs or the installed
-"Sonar Edge for iCUE" shortcut. Import Sonar Edge XL.icuewidget into iCUE,
+To run inside iCUE instead, open Customize > App version > Start iCUE
+companion. Import Sonar Edge XL.icuewidget into iCUE,
 add it to a page, and choose Appearance > Size > XL. Full instructions are
 in iCUE XL setup.txt. The companion stays in the system tray and supplies
 the widget's controls over an automatically configured local connection.
@@ -38,8 +38,8 @@ an iCUE setup guide, and optional Copy URL / Copy iframe HTML controls.
 The imported widget reconnects automatically after the companion restarts.
 
 INSTALL, UPDATE AND UNINSTALL
-The Setup EXE installs Sonar Edge for your Windows account, with Start menu
-shortcuts, an optional Desktop shortcut, and an optional Windows startup entry.
+The Setup EXE installs Sonar Edge for your Windows account, with one Start menu
+shortcut, an optional Desktop shortcut, and an optional Windows startup entry.
 It stays in LocalAppData\Programs\SonarEdge until you uninstall it. The
 extracted ZIP or downloaded installer can be deleted after installation.
 Setup checks WebView2 and installs Microsoft's runtime only if it is missing;

@@ -43,10 +43,11 @@ MusicBee progress and volume use the included MusicBee helper.
 Choose "Open SonarEdge.exe as: iCUE iframe" and Save changes to make the
 companion your default. To change back, use Open desktop from the companion
 tray or the iframe's App version page, then save Desktop as your default.
-"Choose app version.vbs" always opens the choice screen, even if iCUE is the
-saved default. Start iCUE companion.vbs always opens the companion directly.
-The normal Sonar Edge shortcut follows your default; Sonar Edge for iCUE
-always starts the companion. No installer is required for the portable ZIP.
+The normal Sonar Edge shortcut follows your saved default. Change it in
+Customize > App version; the installer creates only this one Start menu entry.
+In the portable ZIP, "Choose app version.vbs" opens the choice screen, even
+if iCUE is the saved default, and Start iCUE companion.vbs starts the companion
+directly. No installer is required for the portable ZIP.
 
 To run the companion without installing shortcuts, use Start iCUE companion.vbs.
 To exit it, right-click its system-tray icon and choose Exit companion.
