@@ -17,10 +17,9 @@ import threading
 APP_NAME = 'Sonar Edge'
 from app_version import VERSION
 ASSETS = Path(__file__).resolve().parent
-# Installer maintenance never opens the GUI, audio bridge, tray or widget server.
-if __name__ == '__main__' and '--configure-startup' in sys.argv:
-    from scheduled_startup import installer_cli
-    raise SystemExit(installer_cli())
+# Windows Startup Apps launches EXEs without a specified working directory.
+if getattr(sys, 'frozen', False):
+    os.chdir(Path(sys.executable).resolve().parent)
 DATA_DIR = Path(os.environ.get('SONAR_EDGE_DATA_DIR') or (Path(os.environ.get('LOCALAPPDATA', str(Path.home()))) / 'SonarEdge'))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 os.environ['SONAR_EDGE_DATA_DIR'] = str(DATA_DIR)
@@ -32,6 +31,13 @@ if sys.stdout is None:
     sys.stdout = open(DATA_DIR / 'runtime.log', 'a', encoding='utf-8')
 if sys.stderr is None:
     sys.stderr = sys.stdout
+
+if __name__ == '__main__':
+    # Configure before dependencies can install a root handler. Record the actual
+    # Windows invocation time even if a dependency fails before main() starts.
+    logging.basicConfig(filename=DATA_DIR / 'sonar-edge.log', level=logging.INFO,
+                        format='%(asctime)s %(levelname)s %(message)s')
+    logging.info('Launch requested; startup=%s executable=%s', '--startup' in sys.argv, sys.executable)
 
 # Set this before .NET caches monitor bounds or creates any windows. The EXE
 # also declares PerMonitorV2 in its manifest; this covers development launches.
@@ -300,8 +306,6 @@ def main():
     migrate_development_settings()
     if args.startup:
         logging.info('Windows startup launch requested')
-        # Give Windows time to restore the Edge display and launch audio apps.
-        threading.Event().wait(6)
     mode = launch_version(DATA_DIR, widget=args.widget,
                           desktop=args.desktop or args.edge or args.windowed or args.choose or bool(args.diagnose))
     widget = mode == 'iframe'

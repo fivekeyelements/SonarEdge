@@ -8,8 +8,6 @@ import tempfile
 import time
 import winreg
 from app_version import VERSION
-from windows_shortcuts import startup_folder, write_shortcut
-from scheduled_startup import ScheduledStartup
 
 ROOT=Path(__file__).resolve().parent
 UNINSTALL_KEY=r'Software\Microsoft\Windows\CurrentVersion\Uninstall\SonarEdgeInstallTest_is1'
@@ -43,11 +41,6 @@ def verify():
     profile=Path(os.environ['LOCALAPPDATA'])/'SonarEdgeInstallTest'
     assert not profile.exists(),'The isolated test profile already exists; inspect it before retrying'
     before=read_value(RUN_KEY,'Sonar Edge')
-    startup_link=startup_folder()/'Sonar Edge Install Test.lnk'
-    assert not startup_link.exists(),'An earlier isolated startup shortcut still exists'
-    task=ScheduledStartup('SonarEdgeInstallTest')
-    assert task.query() is None,'An earlier isolated logon task still exists'
-    actual_task=ScheduledStartup().query()
     scratch=ROOT/'build/installer-check'
     scratch.mkdir(parents=True,exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='lifecycle-',dir=scratch) as folder:
@@ -60,11 +53,7 @@ def verify():
             assert (app/'SonarEdge.exe').is_file() and (app/'unins000.exe').is_file()
             assert json.loads((app/'installation.json').read_text('utf-8-sig'))['appId']=='SonarEdgeInstallTest'
             assert read_value(UNINSTALL_KEY,'DisplayVersion')==VERSION
-            assert read_value(RUN_KEY,RUN_NAME) is None,'Startup should launch through one logon task'
-            assert not startup_link.exists(),'An install left duplicate startup entries'
-            state=task.query()
-            assert state=={'target':str(app/'SonarEdge.exe'),'arguments':'--startup','directory':str(app),
-                'enabled':True,'sid':task.sid,'logon':'InteractiveToken','runLevel':'LeastPrivilege','delay':'PT5S'},state
+            assert read_value(RUN_KEY,RUN_NAME)==f'"{app}\\SonarEdge.exe" --startup'
             programs=Path(os.environ['APPDATA'])/'Microsoft/Windows/Start Menu/Programs'
             shortcut=programs/'Sonar Edge Install Test.lnk'
             menu=programs/'Sonar Edge Install Test'
@@ -74,40 +63,21 @@ def verify():
             menu.mkdir()
             for name in ('Sonar Edge.lnk',*LEGACY_MENU_LINKS):shutil.copy2(shortcut,menu/name)
             shortcut.unlink()  # Upgrade must repair a missing Start menu entry.
-            profile.mkdir(exist_ok=True)
+            profile.mkdir()
             saved=profile/'preferences.json'
             saved.write_text('{"custom":"keep my layout"}','utf-8')
-            # A user disabling the task directly must retain that choice on update.
-            assert task._run('/Change','/TN',task.name,'/Disable').returncode==0
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER,RUN_KEY,0,winreg.KEY_SET_VALUE) as key:winreg.DeleteValue(key,RUN_NAME)
             run([*common,'/UPDATE=1','/NOICONS','/GROUP=Unused old group',f'/LOG={location/"upgrade.log"}'])
             assert shortcut.is_file(),'Upgrade did not repair the direct Start menu shortcut'
             assert not menu.exists(),'Upgrade left redundant Start menu shortcuts'
             assert read_value(RUN_KEY,RUN_NAME) is None,'An update re-enabled disabled startup'
-            assert not startup_link.exists(),'An update re-enabled disabled startup'
-            assert task.query() is None,'An update re-enabled disabled startup'
             assert saved.read_text('utf-8')=='{"custom":"keep my layout"}'
-            # Migrate enabled startup from a previous installer's registry entry.
-            with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER,RUN_KEY,0,winreg.KEY_SET_VALUE) as key:
-                winreg.SetValueEx(key,RUN_NAME,0,winreg.REG_SZ,f'"{app}\\SonarEdge.exe" --startup')
-            run([*common,'/UPDATE=1','/TASKS='])
-            assert task.query()['enabled'],'An update lost enabled legacy startup'
-            assert read_value(RUN_KEY,RUN_NAME) is None,'An update left duplicate startup registrations'
-            run([*common,'/UPDATE=1','/TASKS='])
-            assert task.query()['enabled'],'An update lost the enabled logon task'
-            # Migrate the native Startup folder method used by earlier 1.0.0 builds.
-            task.delete()
-            write_shortcut(startup_link,app/'SonarEdge.exe','--startup')
-            run([*common,'/UPDATE=1','/TASKS='])
-            assert task.query()['enabled'] and not startup_link.exists(),'Startup folder migration failed'
             # Enable through the installer, then verify uninstall removes its entry.
             run(common)
             run([app/'unins000.exe','/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART'])
             wait_removed(app)
             assert read_value(UNINSTALL_KEY,'UninstallString') is None
             assert read_value(RUN_KEY,RUN_NAME) is None
-            assert not startup_link.exists(),'Uninstall left the startup shortcut behind'
-            assert task.query() is None,'Uninstall left the logon task behind'
-            assert not task.marker.exists(),'Uninstall left a startup task marker behind'
             assert not shortcut.exists(),'Uninstall left the Start menu shortcut behind'
             assert saved.is_file(),'Default uninstall discarded saved settings'
             run(common)
@@ -115,7 +85,6 @@ def verify():
             wait_removed(app)
             assert not profile.exists(),'Explicit data removal left the test profile behind'
             assert read_value(RUN_KEY,'Sonar Edge')==before,'The test touched the real startup entry'
-            assert ScheduledStartup().query()==actual_task,'The test touched the real logon task'
             print('Installer verified: registration, shortcuts, upgrade, startup choices, uninstall and optional data removal.')
         finally:
             registered=read_value(UNINSTALL_KEY,'UninstallString')

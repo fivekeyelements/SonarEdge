@@ -25,9 +25,10 @@ is required for the widget view. Sonar Edge automatically reconnects as those
 apps become available. One running app and one tray icon serve both views, with no address entry
 or external hosting. Minimize or close the window to keep iCUE working;
 choose Exit Sonar Edge from the tray to quit. The bottom gear opens Settings.
-Start with Windows uses one per-user logon task to avoid Explorer's delayed
-Startup folder launches. It runs the installed app directly, with your normal
-permissions and no password or PowerShell. Updates migrate older startup entries.
+Start with Windows uses the standard per-user Startup Apps entry and starts the
+installed EXE directly. No scheduled task, administrator access or PowerShell is
+needed. Windows controls launch timing and may delay startup while signing in.
+Updates replace the older Startup folder shortcut with this single entry.
 
 Uninstall through **Windows Settings → Apps → Installed apps → Sonar Edge**.
 The uninstaller removes the app, its shortcuts, and its startup entry; it lets

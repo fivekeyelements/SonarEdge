@@ -102,57 +102,6 @@ begin
   Result := ExpandConstant('{param:UPDATE|0}') = '1';
 end;
 
-function WantsStartup: Boolean;
-begin
-  if IsUpdate then Result := PreviousStartup
-  else Result := WizardIsTaskSelected('autostart');
-end;
-
-function StartupTaskName: String;
-var Saved: AnsiString; Prefix, Suffix: String; I: Integer;
-begin
-  Result := '';
-  if not LoadStringFromFile(ExpandConstant('{localappdata}\{#ProfileName}\startup-task-name.txt'), Saved) then exit;
-  Prefix := 'KagiSoftware.{#ProfileName}-';
-  if (Pos(Prefix + 'S-1-', String(Saved)) <> 1) or (Length(Saved) > 240) then exit;
-  Suffix := Copy(String(Saved), Length(Prefix) + 1, Length(Saved));
-  for I := 3 to Length(Suffix) do
-    if ((Suffix[I] < '0') or (Suffix[I] > '9')) and (Suffix[I] <> '-') then exit;
-  Result := String(Saved);
-end;
-
-function ScheduledStartupEnabled: Boolean;
-var Service, Task: Variant; Name: String;
-begin
-  Result := False;
-  Name := StartupTaskName;
-  if Name = '' then exit;
-  try
-    Service := CreateOleObject('Schedule.Service'); Service.Connect;
-    Task := Service.GetFolder('\').GetTask(Name);
-    Result := Task.Enabled;
-  except
-    Log('No enabled Sonar Edge logon task was found.');
-  end;
-end;
-
-procedure RemoveStartupTask;
-var Service: Variant; Name: String;
-begin
-  Name := StartupTaskName;
-  if Name = '' then exit;
-  Service := CreateOleObject('Schedule.Service'); Service.Connect;
-  { Delete only this product's per-user task, recorded by its native helper. }
-  try
-    Service.GetFolder('\').GetTask(Name);
-  except
-    DeleteFile(ExpandConstant('{localappdata}\{#ProfileName}\startup-task-name.txt'));
-    exit;
-  end;
-  Service.GetFolder('\').DeleteTask(Name, 0);
-  DeleteFile(ExpandConstant('{localappdata}\{#ProfileName}\startup-task-name.txt'));
-end;
-
 function NeedsWebView: Boolean;
 var V: String;
 begin
@@ -178,7 +127,7 @@ end;
 
 function InitializeSetup: Boolean;
 begin
-  PreviousStartup := ScheduledStartupEnabled or RegValueExists(HKCU, RunKey, '{#RunValueName}') or FileExists(ExpandConstant('{userstartup}\{#ProductName}.lnk'));
+  PreviousStartup := RegValueExists(HKCU, RunKey, '{#RunValueName}') or FileExists(ExpandConstant('{userstartup}\{#ProductName}.lnk'));
   Result := True;
 end;
 
@@ -190,7 +139,7 @@ begin
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
-var ExitCode: Integer; Enabled: Boolean; Marker, StartupChoice: String;
+var ExitCode: Integer; Enabled: Boolean; Marker: String;
 begin
   if CurStep = ssPostInstall then begin
     if NeedsWebView then begin
@@ -198,12 +147,13 @@ begin
         RaiseException('Microsoft WebView2 could not start. Run Setup again.');
       if NeedsWebView then RaiseException('WebView2 installation did not finish. Connect to the internet and run Setup again.');
     end;
-    Enabled := WantsStartup;
-    if Enabled then StartupChoice := 'enable' else StartupChoice := 'disable';
-    if not Exec(ExpandConstant('{app}\SonarEdge.exe'), '--configure-startup ' + StartupChoice + ' --startup-profile {#ProfileName}', ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ExitCode) then
-      RaiseException('Windows startup could not be configured. Run Setup again.');
-    if ExitCode <> 0 then
-      RaiseException('Windows startup could not be configured. Check LocalAppData\{#ProfileName}\startup-setup.log, then run Setup again.');
+    Enabled := WizardIsTaskSelected('autostart');
+    if IsUpdate then Enabled := PreviousStartup;
+    if Enabled then begin
+      if not RegWriteStringValue(HKCU, RunKey, '{#RunValueName}', ExpandConstant('"{app}\SonarEdge.exe" --startup')) then
+        RaiseException('Windows startup could not be saved.');
+    end else RegDeleteValue(HKCU, RunKey, '{#RunValueName}');
+    DeleteFile(ExpandConstant('{userstartup}\{#ProductName}.lnk'));
     Marker := '{"appId":"{#AppId}","version":"{#AppVersion}"}';
     if not SaveStringToFile(ExpandConstant('{app}\installation.json'), Marker, False) then
       RaiseException('The installation record could not be saved.');
@@ -215,7 +165,6 @@ end;
 
 function GetCustomSetupExitCode: Integer;
 begin
-  { Inno otherwise reports success for exceptions after file installation. }
   if StartupConfigured then Result := 0 else Result := 1;
 end;
 
@@ -272,7 +221,6 @@ procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var Command, Prefix, DataFolder: String;
 begin
   if CurUninstallStep = usUninstall then begin
-    RemoveStartupTask;
     Prefix := Lowercase(ExpandConstant('"{app}\'));
     if RegQueryStringValue(HKCU, RunKey, '{#RunValueName}', Command) and (Pos(Prefix, Lowercase(Command)) = 1) then
       RegDeleteValue(HKCU, RunKey, '{#RunValueName}');
