@@ -1,5 +1,6 @@
 """Edge Audio: loopback-only Sonar + MusicBee control bridge for an iCUE iframe."""
 import asyncio
+from edge_brightness import EdgeBrightness
 import copy
 import hmac
 import hashlib
@@ -589,6 +590,8 @@ class Bridge:
         self.loop.run_forever()
 
     async def dispatch(self, path, data):
+        if path == '/api/display':
+            return await asyncio.to_thread(DISPLAY_BRIGHTNESS.command, data)
         if path == '/api/update':
             if not self.updater:
                 raise ValueError('Open the installed Sonar Edge app to use updates')
@@ -630,6 +633,7 @@ class Bridge:
 
 
 BRIDGE = Bridge()
+DISPLAY_BRIGHTNESS = EdgeBrightness()
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -666,6 +670,8 @@ class Handler(BaseHTTPRequestHandler):
                                   'appVersion': BRIDGE.app_versions.info() if BRIDGE.app_versions else None})
         if path == '/api/app':
             return self.send(200, BRIDGE.app_versions.info() if BRIDGE.app_versions else None)
+        if path == '/api/display':
+            return self.send(200, DISPLAY_BRIGHTNESS.info())
         if path == '/api/update':
             return self.send(200, BRIDGE.updater.info() if BRIDGE.updater else None)
         if path == '/api/state':

@@ -96,6 +96,14 @@ class AppVersionTests(unittest.TestCase):
                 with self.assertRaises(HTTPError) as error:
                     urlopen(Request(base+'/api/app',data=b'{"action":"open","mode":"desktop"}',headers={'Content-Type':'application/json'}))
                 self.assertEqual(error.exception.code,403)
+                with patch.object(server,'DISPLAY_BRIGHTNESS') as brightness:
+                    brightness.info.return_value={'displays':[{'id':'edge','brightness':95}]}
+                    with urlopen(base+'/api/display') as response:
+                        self.assertEqual(json.load(response),brightness.info.return_value)
+                    with self.assertRaises(HTTPError) as error:
+                        urlopen(Request(base+'/api/display',data=b'{"action":"brightness","value":50}',headers={'Content-Type':'application/json'}))
+                    self.assertEqual(error.exception.code,403)
+                    brightness.command.assert_not_called()
             finally:
                 listener.shutdown();thread.join();listener.server_close()
 

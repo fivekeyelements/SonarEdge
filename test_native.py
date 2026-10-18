@@ -92,6 +92,12 @@ class NativeTests(unittest.TestCase):
                 self.assertFalse(result['ok'])
                 self.assertEqual(result['error'],'Unknown desktop operation')
 
+    def test_native_display_settings_use_the_same_hardware_service_as_the_widget(self):
+        with patch.object(native.core,'DISPLAY_BRIGHTNESS') as brightness:
+            brightness.info.return_value={'displays':[{'id':'edge','brightness':95}]}
+            self.assertEqual(self.api.call('GET','/api/display')['data'],brightness.info.return_value)
+            brightness.info.assert_called_once_with()
+
     def test_state_artwork_uses_local_files_and_returns_a_copy(self):
         state=self.api.call('GET','/api/state',{})
         self.assertTrue(state['ok'])

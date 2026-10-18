@@ -365,6 +365,34 @@ function collectDraft() {
     draft.artworkEffects.blur=Number($('#effects-blur').value);
   }
 }
+async function renderBrightnessSettings(){
+  const host=$('#brightness-settings');
+  try{
+    const info=await get('/api/display');
+    if(!host?.isConnected)return;
+    host.innerHTML=`<h3>XENEON EDGE brightness</h3>${info.displays.map(d=>d.brightness===null?`<p class="settings-help" role="status">${esc(d.error)}</p>`:`<label class="field range-field"><span class="range-label">${esc(d.name)}<output>${d.brightness}%</output></span><input type="range" min="0" max="100" step="1" value="${d.brightness}" data-brightness-id="${esc(d.id)}" aria-label="${esc(d.name)} brightness"></label>`).join('')}${info.message?`<p class="settings-help" role="status">${esc(info.message)}</p>`:''}<p class="settings-help">Changes the display brightness immediately.</p><button class="button secondary" id="refresh-brightness">Refresh display</button>`;
+    host.querySelector('#refresh-brightness').addEventListener('click',renderBrightnessSettings);
+    host.querySelectorAll('[data-brightness-id]').forEach(input=>{
+      const output=input.closest('label').querySelector('output');
+      let timer=null,pending=false,desired=null,confirmed=Number(input.value);
+      async function apply(){
+        clearTimeout(timer);
+        if(pending||desired===null||!input.isConnected)return;
+        const value=desired;desired=null;pending=true;
+        try{
+          const result=await execute('/api/display',{action:'brightness',id:input.dataset.brightnessId,value});
+          confirmed=result.brightness;
+          if(desired===null&&input.isConnected){input.value=confirmed;output.value=confirmed+'%';}
+        }catch{
+          desired=null;
+          if(input.isConnected){input.value=confirmed;output.value=confirmed+'%';}
+        }finally{pending=false;if(desired!==null)apply();}
+      }
+      input.addEventListener('input',()=>{output.value=input.value+'%';desired=Number(input.value);clearTimeout(timer);timer=setTimeout(apply,120);});
+      input.addEventListener('change',()=>{desired=Number(input.value);apply();});
+    });
+  }catch(error){if(host?.isConnected)host.textContent=error.message;}
+}
 function settingsContent() {
   $('.sheet').classList.add('settings-sheet');
   const options = (choices,value) => choices.map(([v,label]) => `<option value="${v}"${v===value?' selected':''}>${label}</option>`).join('');
@@ -372,7 +400,7 @@ function settingsContent() {
   const color=(label,id,value)=>`<label class="color-field">${label}<input type="color" id="${id}" value="${value}"></label>`;
   const range=(label,id,value,min,max,step,display)=>`<label class="field range-field"><span class="range-label">${label}<output>${display}</output></span><input type="range" id="${id}" min="${min}" max="${max}" step="${step}" value="${value}"></label>`;
   let content='';
-  if(settingsTab==='window')content='<div id="window-settings">Loading display settings…</div>';
+  if(settingsTab==='window')content=`<div class="settings-grid ${window.SONAR_EDGE_NATIVE?'two-columns':'display-only'}"><div class="settings-column" id="brightness-settings">Reading display brightness…</div>${window.SONAR_EDGE_NATIVE?'<div class="settings-column" id="window-settings">Loading window settings…</div>':''}</div>`;
   if(settingsTab==='updates'){
     const u=updateInfo,busy=['checking','downloading','installing'].includes(u?.status);
     content=u?`<div class="update-card"><span class="eyebrow">INSTALLED VERSION ${esc(u.currentVersion)}</span><h3>${esc(u.message)}</h3><div class="update-buttons"><button class="button secondary" id="check-updates"${busy?' disabled':''}>Check for updates</button>${u.status==='available'?`<button class="button primary" id="install-update"${u.installed?'':' disabled'}>Download & install ${esc(u.version)}</button>`:''}${u.status==='downloading'?'<button class="button secondary" id="cancel-update">Cancel download</button>':''}</div>${['downloading','installing'].includes(u.status)?`<div class="update-progress"><progress max="100" value="${Number(u.progress)||0}"></progress><span>${Number(u.progress)||0}%</span></div>`:''}${!u.installed?'<p class="settings-help">Install Sonar Edge with Setup to enable in-app installation.</p>':''}${u.notes?`<h4>Release notes</h4><div class="update-notes">${esc(u.notes)}</div>`:''}</div><details class="update-source"><summary>GitHub repository</summary><div class="update-source-field"><input id="update-repository" type="text" value="${esc(u.repository)}" aria-label="GitHub update repository" placeholder="owner/repository"${busy?' disabled':''}><button class="button secondary" id="save-update-source"${busy?' disabled':''}>Save repository</button></div></details>`:'<p class="settings-help">Loading update settings…</p>';
@@ -412,7 +440,8 @@ function settingsContent() {
     ${draft.channels.map((c,i)=>`<div class="channel-setting-row" data-id="${c.id}"><input type="checkbox" aria-label="Show ${esc(c.label)}"${c.visible?' checked':''}><input type="text" aria-label="${c.id} channel label" maxlength="24" value="${esc(c.label)}"><input type="color" aria-label="${c.id} channel color" value="${c.color}"><button class="icon-button quiet" data-move="-1" data-id="${c.id}" aria-label="Move ${esc(c.label)} left"${i===0?' disabled':''}>${svg('up')}</button><button class="icon-button quiet" data-move="1" data-id="${c.id}" aria-label="Move ${esc(c.label)} right"${i===draft.channels.length-1?' disabled':''}>${svg('down')}</button></div>`).join('')}</div>
     <div class="settings-column"><h3>Channel layout</h3><label class="check"><input type="checkbox" id="settings-meters"${draft.showMeters?' checked':''}>Live audio meters</label><label class="check"><input type="checkbox" id="settings-chatmix"${draft.showChatMix?' checked':''}>ChatMix control</label><p class="settings-help">Meters show live channel activity before Sonar volume. Master summarizes output activity.</p><p class="settings-help">Choose which channels appear, rename them, change their colors, and move them with the arrows.</p></div></div>`;
   if(settingsTab==='actions')content=`<label class="check actions-label-toggle"><input type="checkbox" id="shortcut-labels"${draft.shortcutLabels?' checked':''}>Show button labels</label><div class="action-column-headings"><span>Action</span><span>Button label</span><span>Icon</span><span>Order</span></div><div class="action-setting-list">${draft.shortcuts.map((action,i)=>`<div class="action-setting-row" data-index="${i}"><select class="shortcut-select" aria-label="Action ${i+1}">${options(Object.entries(actionNames),action)}</select><input class="action-label" type="text" maxlength="24" value="${esc(draft.shortcutAppearance?.[action]?.label||'')}" placeholder="${actionNames[action]}" aria-label="Button ${i+1} label"><select class="action-icon" aria-label="Button ${i+1} icon">${options(Object.entries(editableIcons),draft.shortcutAppearance?.[action]?.icon||actionIcons[action])}</select><div class="action-order"><button class="icon-button quiet" data-action-move="-1" aria-label="Move action ${i+1} left"${i===0?' disabled':''}>${svg('up')}</button><button class="icon-button quiet" data-action-move="1" aria-label="Move action ${i+1} right"${i===draft.shortcuts.length-1?' disabled':''}>${svg('down')}</button><button class="icon-button quiet" data-action-remove aria-label="Remove action ${i+1}">${svg('close')}</button></div></div>`).join('')}</div><button class="button secondary" id="add-action"${draft.shortcuts.length>=8?' disabled':''}>${svg('plus')}Add action</button>`;
-  $('#sheet-content').innerHTML=`<nav class="settings-tabs" aria-label="Settings categories">${[['layout','Layout & player'],['appearance','Appearance'],['effects','Artwork effects'],['background','Background'],['channels','Mixer channels'],['actions','Bottom buttons'],['version','App version'],...(window.SONAR_EDGE_NATIVE?[['window','Window & display']]:[]),['updates','Updates']].map(([id,label])=>`<button class="settings-tab${id===settingsTab?' active':''}" data-settings-tab="${id}" aria-current="${id===settingsTab?'page':'false'}">${label}</button>`).join('')}</nav><div class="settings-body">${content}</div><div class="settings-actions"><button class="button secondary" id="cancel-settings">Cancel</button><button class="button primary" id="save-settings">Save changes</button></div>`;
+  $('#sheet-content').innerHTML=`<nav class="settings-tabs" aria-label="Settings categories">${[['layout','Layout & player'],['appearance','Appearance'],['effects','Artwork effects'],['background','Background'],['channels','Mixer channels'],['actions','Bottom buttons'],['version','App version'],['window',window.SONAR_EDGE_NATIVE?'Window & display':'Display'],['updates','Updates']].map(([id,label])=>`<button class="settings-tab${id===settingsTab?' active':''}" data-settings-tab="${id}" aria-current="${id===settingsTab?'page':'false'}">${label}</button>`).join('')}</nav><div class="settings-body">${content}</div><div class="settings-actions"><button class="button secondary" id="cancel-settings">Cancel</button><button class="button primary" id="save-settings">Save changes</button></div>`;
+  if(settingsTab==='window')renderBrightnessSettings();
   if(settingsTab==='window'&&window.SONAR_EDGE_NATIVE)renderWindowSettings();
   $$('[data-open-version]').forEach(button=>button.addEventListener('click',async()=>{
     button.disabled=true;try{const result=await execute('/api/app',{action:'open',mode:button.dataset.openVersion});toast(result.message);}catch{}finally{button.disabled=false;}

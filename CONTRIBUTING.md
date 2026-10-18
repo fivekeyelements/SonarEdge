@@ -19,7 +19,7 @@ python verify_installer.py
 ```
 
 `SONAR_EDGE_ISCC` can point to ISCC.exe if Inno Setup is installed elsewhere.
-The installer lifecycle test uses an isolated installation, startup value,
+The installer lifecycle test uses an isolated installation, startup shortcut,
 Start menu group, and settings folder; it never uninstalls the real app.
 
 ## Releasing an update

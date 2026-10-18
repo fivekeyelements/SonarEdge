@@ -16,6 +16,7 @@ Choose Desktop or iCUE in **Settings → App version**. Import the included
 - MusicBee controls, artwork, progress, seeking, and player volume with the included helper
 - Other music apps through Windows media controls
 - Custom backgrounds, album colors, optional animated blur, readable text, and configurable buttons
+- Hardware XENEON EDGE brightness in Settings → Window & display (Display in iCUE)
 - Runs in the system tray, with no taskbar button even while the desktop window is open
 - User-initiated GitHub update checks and verified installer downloads
 
@@ -24,6 +25,8 @@ is required for the widget view. Sonar Edge automatically reconnects as those
 apps become available. One running app and one tray icon serve both views, with no address entry
 or external hosting. Minimize or close the window to keep iCUE working;
 choose Exit Sonar Edge from the tray to quit. The bottom gear opens Settings.
+Start with Windows uses one native shortcut in your account's Startup folder,
+with the installed app's working directory. Updates migrate the older Run entry.
 
 Uninstall through **Windows Settings → Apps → Installed apps → Sonar Edge**.
 The uninstaller removes the app, its shortcuts, and its startup entry; it lets

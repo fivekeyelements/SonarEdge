@@ -17,6 +17,8 @@ Use Settings > App version to change modes at any time.
 START WITH WINDOWS
 Open Settings > App version, enable Start with Windows, and Save changes.
 Sonar Edge starts your selected Desktop or iCUE version after Windows sign-in.
+It uses one native shortcut in your Windows Startup folder with the app's
+working directory. Enabling startup migrates the older registry entry.
 Installed copies start directly from LocalAppData\Programs\SonarEdge.
 Portable copies can keep a managed startup copy until you install the app.
 No administrator access, scheduled task, script, or PowerShell process is
@@ -74,6 +76,12 @@ the iCUE widget and audio controls keep running. The bottom gear opens Settings;
 Window & display contains fullscreen, display placement and Minimize to tray. Double-click the
 Sonar Edge tray icon or choose Open Sonar Edge from its menu to restore it.
 Choose Exit Sonar Edge from the tray menu to quit the whole app.
+
+DISPLAY BRIGHTNESS
+Open Settings > Window & display in the desktop app, or Settings > Display
+in iCUE. The brightness slider changes the XENEON EDGE hardware immediately.
+Only identified EDGE displays are controlled; other monitors are left alone.
+Use Refresh display after reconnecting the EDGE.
 
 CONTROL
 Run SteelSeries GG with Sonar enabled. Volumes, mute, presets, and output/input

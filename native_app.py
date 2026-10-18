@@ -166,6 +166,8 @@ class NativeAPI:
                     return self._bridge.app_versions.info()
                 if path == '/api/update':
                     return self._bridge.updater.info()
+                if path == '/api/display':
+                    return core.DISPLAY_BRIGHTNESS.info()
                 if path == '/api/state':
                     return self._state()
                 if path == '/api/meters':
@@ -173,7 +175,7 @@ class NativeAPI:
                 if path not in ('/api/catalog', '/api/players'):
                     raise ValueError('Unknown desktop operation')
             elif method == 'POST':
-                if path not in ('/api/sonar', '/api/music', '/api/preferences', '/api/validate-preferences', '/api/launch', '/api/app', '/api/update'):
+                if path not in ('/api/sonar', '/api/music', '/api/preferences', '/api/validate-preferences', '/api/launch', '/api/app', '/api/update', '/api/display'):
                     raise ValueError('Unknown desktop operation')
             else:
                 raise ValueError('Unknown desktop operation')
@@ -293,6 +295,7 @@ def main():
                         format='%(asctime)s %(levelname)s %(message)s')
     migrate_development_settings()
     if args.startup:
+        logging.info('Windows startup launch requested')
         # Give Windows time to restore the Edge display and launch audio apps.
         threading.Event().wait(6)
     mode = launch_version(DATA_DIR, widget=args.widget,

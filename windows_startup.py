@@ -1,4 +1,4 @@
-"""Per-user Windows startup registration; starts the packaged EXE directly."""
+"""Per-user Windows Startup shortcut; starts the EXE with its working directory."""
 import hashlib
 import os
 from pathlib import Path
@@ -8,6 +8,7 @@ import shutil
 import sys
 import winreg
 import installation
+from windows_shortcuts import startup_folder, read_shortcut, write_shortcut
 
 RUN_KEY = r'Software\Microsoft\Windows\CurrentVersion\Run'
 VALUE_NAME = 'Sonar Edge'
@@ -24,8 +25,16 @@ class WindowsStartup:
         self.version = version
         self.install_root = Path(install_root or (Path(os.environ['LOCALAPPDATA']) / 'Programs/SonarEdge/versions'))
         self.available = bool(getattr(sys, 'frozen', False)) if available is None else available
+        self.shortcut = startup_folder() / 'Sonar Edge.lnk'
 
     def registered_command(self):
+        if self.shortcut.is_file():
+            try:
+                link = read_shortcut(self.shortcut)
+                if Path(link['target']).name.lower() == 'sonaredge.exe' and link['arguments'] == '--startup':
+                    return f'"{link["target"]}" --startup'
+            except OSError:
+                pass
         try:
             with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY) as key:
                 value, kind = winreg.QueryValueEx(key, VALUE_NAME)
@@ -34,7 +43,16 @@ class WindowsStartup:
             return ''
 
     def info(self):
-        return {'available': self.available, 'enabled': bool(self.registered_command())}
+        return {'available': self.available, 'enabled': bool(self.registered_command()),
+                'method':'startup-folder' if self.shortcut.is_file() else 'registry'}
+
+    @staticmethod
+    def remove_legacy_entry():
+        try:
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY, 0, winreg.KEY_SET_VALUE) as key:
+                winreg.DeleteValue(key, VALUE_NAME)
+        except FileNotFoundError:
+            pass
 
     def deploy(self):
         registered = installation.registered_executable()
@@ -75,14 +93,17 @@ class WindowsStartup:
             command = f'"{target}" --startup'
             if len(command) > 260:
                 raise ValueError('The Windows startup path is too long')
-            with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, RUN_KEY, 0, winreg.KEY_SET_VALUE) as key:
-                winreg.SetValueEx(key, VALUE_NAME, 0, winreg.REG_SZ, command)
-        else:
+            expected={'target':str(target),'arguments':'--startup','directory':str(target.parent)}
             try:
-                with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY, 0, winreg.KEY_SET_VALUE) as key:
-                    winreg.DeleteValue(key, VALUE_NAME)
-            except FileNotFoundError:
-                pass
+                current=read_shortcut(self.shortcut) if self.shortcut.is_file() else None
+            except OSError:
+                current=None
+            if current != expected:
+                write_shortcut(self.shortcut,target,'--startup')
+            self.remove_legacy_entry()
+        else:
+            self.shortcut.unlink(missing_ok=True)
+            self.remove_legacy_entry()
         return self.info()
 
     def refresh_if_enabled(self):

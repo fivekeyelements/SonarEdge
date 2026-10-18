@@ -73,4 +73,5 @@
 /* Settings stays reachable even when every quick action is hidden. */
 #customize.settings-button{width:68px;height:68px;min-height:68px;border:1px solid #ffffff1c;border-radius:calc(var(--roundness,20px)*.7);background:var(--panel-color,#1d242d)}
 #customize.settings-button svg{width:30px;height:30px}
+.settings-grid.display-only{grid-template-columns:minmax(0,1fr);max-width:1000px;margin-inline:auto}#brightness-settings input[type=range]{height:48px}
 #stage.no-shortcuts{grid-template-rows:56px minmax(0,1fr) 68px}.no-shortcuts footer{display:flex}

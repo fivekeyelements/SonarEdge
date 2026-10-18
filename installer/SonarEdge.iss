@@ -67,8 +67,10 @@ Source: "..\packaging\MicrosoftEdgeWebview2Setup.exe"; DestDir: "{tmp}"; Flags: 
 ; A direct Start menu entry is always created, including upgrades from /NOICONS.
 Name: "{userprograms}\{#ProductName}"; Filename: "{app}\SonarEdge.exe"; WorkingDir: "{app}"
 Name: "{autodesktop}\Sonar Edge"; Filename: "{app}\SonarEdge.exe"; WorkingDir: "{app}"; Tasks: desktopicon
+Name: "{userstartup}\{#ProductName}"; Filename: "{app}\SonarEdge.exe"; Parameters: "--startup"; WorkingDir: "{app}"; Check: WantsStartup
 
 [InstallDelete]
+Type: files; Name: "{userstartup}\{#ProductName}.lnk"; Check: not WantsStartup
 Type: files; Name: "{userprograms}\{#ProductName}\Sonar Edge.lnk"
 Type: files; Name: "{userprograms}\{#ProductName}\Sonar Edge Desktop.lnk"
 Type: files; Name: "{userprograms}\{#ProductName}\Sonar Edge for iCUE.lnk"
@@ -84,6 +86,7 @@ Filename: "{app}\SonarEdge.exe"; Description: "Open Sonar Edge"; Flags: nowait p
 
 [UninstallDelete]
 Type: files; Name: "{app}\installation.json"
+Type: files; Name: "{userstartup}\{#ProductName}.lnk"
 
 [Code]
 const RunKey = 'Software\Microsoft\Windows\CurrentVersion\Run';
@@ -99,6 +102,12 @@ function CloseHandle(Handle: THandle): Boolean;
 function IsUpdate: Boolean;
 begin
   Result := ExpandConstant('{param:UPDATE|0}') = '1';
+end;
+
+function WantsStartup: Boolean;
+begin
+  if IsUpdate then Result := PreviousStartup
+  else Result := WizardIsTaskSelected('autostart');
 end;
 
 function NeedsWebView: Boolean;
@@ -126,7 +135,7 @@ end;
 
 function InitializeSetup: Boolean;
 begin
-  PreviousStartup := RegValueExists(HKCU, RunKey, '{#RunValueName}');
+  PreviousStartup := RegValueExists(HKCU, RunKey, '{#RunValueName}') or FileExists(ExpandConstant('{userstartup}\{#ProductName}.lnk'));
   Result := True;
 end;
 
@@ -146,12 +155,10 @@ begin
         RaiseException('Microsoft WebView2 could not start. Run Setup again.');
       if NeedsWebView then RaiseException('WebView2 installation did not finish. Connect to the internet and run Setup again.');
     end;
-    Enabled := WizardIsTaskSelected('autostart');
-    if IsUpdate then Enabled := PreviousStartup;
-    if Enabled then begin
-      if not RegWriteStringValue(HKCU, RunKey, '{#RunValueName}', ExpandConstant('"{app}\SonarEdge.exe" --startup')) then
-        RaiseException('Windows startup could not be saved.');
-    end else RegDeleteValue(HKCU, RunKey, '{#RunValueName}');
+    Enabled := WantsStartup;
+    if Enabled and not FileExists(ExpandConstant('{userstartup}\{#ProductName}.lnk')) then
+      RaiseException('The Windows startup shortcut could not be saved.');
+    RegDeleteValue(HKCU, RunKey, '{#RunValueName}');
     Marker := '{"appId":"{#AppId}","version":"{#AppVersion}"}';
     if not SaveStringToFile(ExpandConstant('{app}\installation.json'), Marker, False) then
       RaiseException('The installation record could not be saved.');
