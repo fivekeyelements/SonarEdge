@@ -77,4 +77,12 @@ jobs:
           $version = python -c 'from app_version import VERSION; print(VERSION)'
           $tag = "v$version"
           if ($env:GITHUB_REF -like 'refs/tags/*' -and $env:GITHUB_REF_NAME -ne $tag) { throw 'Tag must match app_version.py' }
-          gh release create $tag "releases/SonarEdge-Setup-$version-Windows-x64.exe" "releases/SonarEdge-$version-Windows-x64.zip" releases/SHA256SUMS.txt --title "Sonar Edge $version" --generate-notes --latest --target $env:GITHUB_SHA
+          $draft = gh release view $tag --json isDraft --jq .isDraft 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            if ($draft -ne 'true') { throw 'This version is already public. Bump VERSION before publishing again.' }
+            gh release upload $tag "releases/SonarEdge-Setup-$version-Windows-x64.exe" "releases/SonarEdge-$version-Windows-x64.zip" releases/SHA256SUMS.txt --clobber
+            if ($LASTEXITCODE -ne 0) { throw 'Draft release upload failed' }
+            gh release edit $tag --draft=false --latest --title "Sonar Edge $version"
+          } else {
+            gh release create $tag "releases/SonarEdge-Setup-$version-Windows-x64.exe" "releases/SonarEdge-$version-Windows-x64.zip" releases/SHA256SUMS.txt --title "Sonar Edge $version" --generate-notes --latest --target $env:GITHUB_SHA
+          }
