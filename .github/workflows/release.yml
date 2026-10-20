@@ -63,6 +63,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Widget reconnect tests failed' }
           node test_actions.cjs
           if ($LASTEXITCODE -ne 0) { throw 'Shortcut state tests failed' }
+          node test_device_lists.cjs
+          if ($LASTEXITCODE -ne 0) { throw 'Audio device list and system volume tests failed' }
       - name: Build application and installers
         run: |
           python build_native.py

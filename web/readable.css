@@ -73,5 +73,23 @@
 /* Settings stays reachable even when every quick action is hidden. */
 #customize.settings-button{width:68px;height:68px;min-height:68px;border:1px solid #ffffff1c;border-radius:calc(var(--roundness,20px)*.7);background:var(--panel-color,#1d242d)}
 #customize.settings-button svg{width:30px;height:30px}
+.settings-tabs{min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.device-visibility-help{margin:0 0 16px}
+.device-list-toolbar,.device-picker-tools{display:flex;align-items:center;gap:16px;margin-bottom:18px}
+.device-list-toolbar input,.device-picker-tools .preset-filter{flex:1;min-width:0;margin:0}
+.settings-body.device-settings-body{display:flex;flex-direction:column;overflow:hidden}
+#device-visibility{display:flex;flex-direction:column;min-height:0;flex:1}.device-list-toolbar,.device-visibility-help{flex-shrink:0}
+.device-visibility-columns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;flex:1;min-height:0}
+.device-visibility-column{min-width:0;min-height:0;display:flex;flex-direction:column}.device-list-heading{display:flex;align-items:center;gap:16px;min-height:58px;margin-bottom:10px;flex-shrink:0}
+.device-list-heading h3{margin:0}.device-list-count{font-size:calc(20px * var(--text-scale,1));color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;margin-right:auto}
+.device-list-bulk{display:flex;gap:10px}.device-list-bulk .button{min-height:48px;padding:8px 14px;font-size:calc(20px * var(--text-scale,1))}
+.device-visibility-list{min-height:0;flex:1;overflow:auto;overscroll-behavior:contain;display:grid;align-content:start;gap:10px;padding:4px 10px 4px 4px}
+.device-visibility-row{display:flex;align-items:center;gap:16px;min-height:72px;padding:14px;border:1px solid #ffffff20;border-radius:12px;background:#ffffff05;cursor:pointer}
+.device-visibility-row input{margin:0;accent-color:var(--accent)}.device-visibility-row>svg{width:26px;height:26px;color:var(--accent)}
+.device-visibility-row>span{min-width:0;flex:1;overflow-wrap:anywhere;font-size:calc(22px * var(--text-scale,1));line-height:1.3}
+.device-visibility-row small{font-size:calc(14px * var(--text-scale,1));color:var(--accent);white-space:nowrap}.device-visibility-row.is-hidden{background:transparent;color:var(--muted)}
+.device-picker-tools .check{margin:0;white-space:nowrap;font-size:calc(22px * var(--text-scale,1))}
+.device-picker-footer #manage-device-list{margin-right:auto}.device-picker-footer{align-items:center;flex-wrap:wrap}
+.device-picker-footer .settings-help{flex-basis:100%;margin:0}
 .settings-grid.display-only{grid-template-columns:minmax(0,1fr);max-width:1000px;margin-inline:auto}#brightness-settings input[type=range]{height:48px}
 #stage.no-shortcuts{grid-template-rows:56px minmax(0,1fr) 68px}.no-shortcuts footer{display:flex}

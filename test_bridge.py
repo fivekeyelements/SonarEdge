@@ -9,6 +9,23 @@ import server
 
 
 class PreferenceTests(unittest.TestCase):
+    def test_device_lists_round_trip_preserve_disconnected_ids_and_default_to_visible(self):
+        prefs=copy.deepcopy(server.DEFAULTS)
+        prefs.pop('hiddenDevices');prefs.pop('masterVolumeTarget')
+        old=server.validate_preferences(prefs)
+        self.assertEqual(old['hiddenDevices'],{'render':[],'capture':[]})
+        self.assertEqual(old['masterVolumeTarget'],'sonar')
+        prefs.update(hiddenDevices={'render':['usb-speakers','unplugged-headphones','usb-speakers'],'capture':['virtual-mic']},masterVolumeTarget='windows')
+        saved=server.validate_preferences(prefs)
+        self.assertEqual(saved['hiddenDevices'],{'render':['usb-speakers','unplugged-headphones'],'capture':['virtual-mic']})
+        self.assertEqual(saved['masterVolumeTarget'],'windows')
+        self.assertEqual(server.validate_preferences(saved),saved)
+
+    def test_invalid_device_visibility_settings_are_rejected(self):
+        for hidden in (None,[],{'render':'all'},{'capture':[True]},{'render':['']},{'render':['x'*257]},{'render':['x']*257}):
+            prefs={**copy.deepcopy(server.DEFAULTS),'hiddenDevices':hidden}
+            with self.assertRaises(ValueError):server.validate_preferences(prefs)
+
     def test_artwork_effects_and_live_controls_round_trip(self):
         prefs=copy.deepcopy(server.DEFAULTS)
         prefs['artworkEffects'].update(colors='all',playerBackground='artwork',mixerBackground='colors',appBackground='colors',motion=False,intensity=.6,blur=65)

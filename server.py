@@ -29,6 +29,7 @@ import musicbee_bridge
 from audio_meters import AudioMeters
 import artwork_palette
 from app_version import VERSION
+from system_volume import SystemVolume
 
 RESOURCE_ROOT = Path(__file__).resolve().parent
 ROOT = Path(os.environ.get('SONAR_EDGE_DATA_DIR', str(RESOURCE_ROOT)))
@@ -55,6 +56,7 @@ DEFAULTS = {
     'shortcuts': ['mic', 'media', 'musicbee', 'sonar'],
     'shortcutLabels': True, 'shortcutAppearance': {},
     'showMeters': True, 'showChatMix': True,
+    'hiddenDevices': {'render': [], 'capture': []}, 'masterVolumeTarget': 'sonar',
     'artworkEffects': {'colors': 'music', 'playerBackground': 'off', 'appBackground': 'off', 'mixerBackground': 'match',
                       'motion': True, 'intensity': .45, 'blur': 52},
 }
@@ -64,6 +66,15 @@ def validate_preferences(value):
     if not isinstance(value, dict):
         raise ValueError('Invalid settings')
     result = copy.deepcopy(DEFAULTS)
+    if value.get('masterVolumeTarget') in ('sonar','windows'):
+        result['masterVolumeTarget'] = value['masterVolumeTarget']
+    hidden = value.get('hiddenDevices',{})
+    if not isinstance(hidden,dict):raise ValueError('Invalid audio device visibility settings')
+    for flow in ('render','capture'):
+        ids = hidden.get(flow,[])
+        if not isinstance(ids,list) or len(ids)>256 or any(not isinstance(i,str) or not 0<len(i)<=256 for i in ids):
+            raise ValueError('Choose up to 256 valid hidden audio devices per list')
+        result['hiddenDevices'][flow] = list(dict.fromkeys(ids))
     for key, choices in [('layout', ['compact', 'balanced', 'mixer', 'music']),
                          ('playerSide', ['left', 'right'])]:
         if value.get(key) in choices:
@@ -528,6 +539,7 @@ class Bridge:
         self.sonar = Sonar()
         self.media = Media()
         self.meters = AudioMeters()
+        self.system_volume = SystemVolume()
         self.preferences = load_preferences()
         self.preferences_stamp = self._preferences_stamp()
         self.state = {'sonar': {'connected': False, 'message': 'Connecting to Sonar…'},
@@ -536,6 +548,7 @@ class Bridge:
         self.ready = threading.Event()
         self.sonar_lock = None
         self.media_lock = None
+        self.system_volume_lock = None
         self.app_versions = None
         self.updater = None
 
@@ -579,17 +592,30 @@ class Bridge:
                     self.state['music'] = {'connected': False, 'message': 'MusicBee media controls are unavailable.', 'detail': str(error)}
             await asyncio.sleep(0.7)
 
+    async def poll_system_volume(self):
+        while True:
+            async with self.system_volume_lock:
+                self.state['systemVolume'] = await asyncio.to_thread(self.system_volume.state)
+            await asyncio.sleep(.3)
+
     def run(self):
         asyncio.set_event_loop(self.loop)
         self.sonar_lock = asyncio.Lock()
         self.media_lock = asyncio.Lock()
+        self.system_volume_lock = asyncio.Lock()
         self.ready.set()
         self.meters.start()
         self.loop.create_task(self.poll_sonar())
         self.loop.create_task(self.poll_media())
+        self.loop.create_task(self.poll_system_volume())
         self.loop.run_forever()
 
     async def dispatch(self, path, data):
+        if path == '/api/system-volume':
+            async with self.system_volume_lock:
+                result = await asyncio.to_thread(self.system_volume.command,data)
+                self.state['systemVolume'] = result
+                return result
         if path == '/api/display':
             return await asyncio.to_thread(DISPLAY_BRIGHTNESS.command, data)
         if path == '/api/update':
@@ -734,7 +760,8 @@ class Handler(BaseHTTPRequestHandler):
                 name = hashlib.sha256(body).hexdigest() + '.' + ext
                 (folder / name).write_bytes(body)
                 return self.send(200, {'source': '/backgrounds/' + name, 'kind': 'video' if ext in ('mp4', 'webm') else 'image'})
-            if length <= 0 or length > 16000 or 'application/json' not in self.headers.get('Content-Type', ''):
+            limit = 256*1024 if urlsplit(self.path).path in ('/api/preferences','/api/validate-preferences') else 16000
+            if length <= 0 or length > limit or 'application/json' not in self.headers.get('Content-Type', ''):
                 return self.send(400, {'error': 'Invalid request'})
             data = json.loads(self.rfile.read(length))
             if not isinstance(data, dict):

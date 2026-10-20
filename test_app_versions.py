@@ -107,5 +107,30 @@ class AppVersionTests(unittest.TestCase):
             finally:
                 listener.shutdown();thread.join();listener.server_close()
 
+    def test_many_hidden_devices_fit_in_settings_requests_without_enlarging_audio_commands(self):
+        from concurrent.futures import Future
+        import copy
+        prefs=copy.deepcopy(server.DEFAULTS)
+        prefs['hiddenDevices']['render']=[str(i)+'x'*120 for i in range(150)]
+        payload=json.dumps(prefs).encode()
+        self.assertGreater(len(payload),16000)
+        def schedule(coroutine,loop):
+            coroutine.close()
+            future=Future();future.set_result(server.validate_preferences(prefs));return future
+        listener=ThreadingHTTPServer(('127.0.0.1',0),server.Handler)
+        port=listener.server_port
+        thread=threading.Thread(target=listener.serve_forever,daemon=True);thread.start()
+        try:
+            with patch.object(server,'PORT',port),patch.object(server.asyncio,'run_coroutine_threadsafe',side_effect=schedule) as dispatch:
+                headers={'Content-Type':'application/json','X-Edge-Token':server.TOKEN}
+                with urlopen(Request(f'http://127.0.0.1:{port}/api/preferences',data=payload,headers=headers)) as response:
+                    self.assertEqual(len(json.load(response)['hiddenDevices']['render']),150)
+                with self.assertRaises(HTTPError) as error:
+                    urlopen(Request(f'http://127.0.0.1:{port}/api/sonar',data=payload,headers=headers))
+                self.assertEqual(error.exception.code,400)
+                dispatch.assert_called_once()
+        finally:
+            listener.shutdown();thread.join();listener.server_close()
+
 
 if __name__=='__main__':unittest.main(verbosity=2)

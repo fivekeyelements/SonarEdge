@@ -11,6 +11,7 @@ node test_visuals.cjs
 node test_widget_fit.cjs
 node test_iframe_reconnect.cjs
 node test_actions.cjs
+node test_device_lists.cjs
 python build_native.py
 python build_installer.py
 python build_installer.py --test

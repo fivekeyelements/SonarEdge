@@ -44,6 +44,28 @@ function shortcutIcon(action, style={}, playing=false, muted=false) {
   return muted?'muted':action==='playpause'&&playing?'pause':actionIcons[action];
 }
 
+function listedDevices(devices,flow,hidden=[],keep=[],query='',showHidden=false) {
+  const excluded=new Set(hidden),search=query.trim().toLocaleLowerCase();
+  return devices.filter(d=>d.dataFlow===flow&&(showHidden||!excluded.has(d.id)||keep.includes(d.id))&&String(d.friendlyName||'Unnamed device').toLocaleLowerCase().includes(search))
+    .sort((a,b)=>String(a.friendlyName||'').localeCompare(String(b.friendlyName||''))||a.id.localeCompare(b.id));
+}
+function setDeviceVisible(settings,flow,id,visible) {
+  settings.hiddenDevices??={render:[],capture:[]};
+  const hidden=new Set(settings.hiddenDevices[flow]||[]);
+  if(visible)hidden.delete(id);else hidden.add(id);
+  settings.hiddenDevices[flow]=[...hidden];
+}
+function systemMaster(settings=preferences){return settings?.masterVolumeTarget==='windows';}
+function volumeRequest(id,action,value,settings=preferences,current=state){
+  return id==='master'&&systemMaster(settings)
+    ?{path:'/api/system-volume',key:'systemVolume',body:{action,value,deviceId:current.systemVolume?.deviceId}}
+    :{path:'/api/sonar',key:'sonar',body:{channel:id,action,value}};
+}
+function channelControl(id){return id==='master'&&systemMaster()?state.systemVolume:state.sonar?.channels?.[id];}
+function channelReady(id){return !!((id==='master'&&systemMaster()?state.systemVolume?.connected:state.sonar?.connected)&&channelControl(id)?.available);}
+function channelLabel(channel){return channel.id==='master'&&systemMaster()&&channel.label==='Master'?'System':channel.label;}
+function shortDeviceName(name){return name?.replace(/^(?:Headphones|Speakers|Headset|Microphone) \((.*)\)$/i,'$1').replace(/ \((?:VB-Audio[^)]*|SteelSeries Sonar Virtual Audio Device)\)$/i,'');}
+
 function hydrate(parent = document) {
   $$('[data-icon]', parent).forEach(el => {
     if (!el.querySelector(':scope > svg')) el.insertAdjacentHTML('afterbegin', svg(el.dataset.icon));
@@ -116,8 +138,8 @@ function applyPreferences() {
   $('#workspace').className = 'workspace' + (preferences.layout === 'balanced' ? '' : ` ${preferences.layout}-focus`) + (preferences.playerSide === 'right' ? ' player-right' : '');
   $('#channels').innerHTML = preferences.channels.filter(c => c.visible).map(c => `
     <article class="channel" data-channel="${c.id}" style="--channel:${c.color}">
-      <div class="channel-head">${svg(c.id === 'master' ? 'volume' : c.id === 'media' ? 'music' : c.id)}<span>${esc(c.label)}</span>${c.id==='master'?'':`<button class="eq-button" aria-label="${esc(c.label)} equalizer presets" disabled>EQ</button>`}</div>
-      ${c.id==='master'?'<div class="device-button master-device"><small>CONTROLS</small><span>All Sonar channels</span></div>':`<button class="device-button" aria-label="Choose ${esc(c.label)} ${c.id==='mic'?'input':'output'} device" disabled><small>${c.id==='mic'?'INPUT':'OUTPUT'}</small><span class="device-name">Connecting…</span>${svg('down')}</button>`}
+      <div class="channel-head">${svg(c.id === 'master' ? 'volume' : c.id === 'media' ? 'music' : c.id)}<span>${esc(channelLabel(c))}</span>${c.id==='master'?'':`<button class="eq-button" aria-label="${esc(c.label)} equalizer presets" disabled>EQ</button>`}</div>
+      ${c.id==='master'?`<div class="device-button master-device"><small>${systemMaster()?'WINDOWS OUTPUT':'CONTROLS'}</small><span>${systemMaster()?'Connecting…':'All Sonar channels'}</span></div>`:`<button class="device-button" aria-label="Choose ${esc(c.label)} ${c.id==='mic'?'input':'output'} device" disabled><small>${c.id==='mic'?'INPUT':'OUTPUT'}</small><span class="device-name">Connecting…</span>${svg('down')}</button>`}
       <div class="fader-area"><div class="fader-ruler"></div><div class="fader-rail"><div class="fader-fill"></div></div><input type="range" class="fader" min="0" max="100" step="1" value="0" aria-label="${esc(c.label)} volume" disabled><div class="signal-meter unavailable" role="meter" aria-label="${esc(c.label)} live signal" aria-valuemin="-60" aria-valuemax="0" aria-valuenow="-60"><div class="signal-track"><div class="signal-mask"></div><div class="signal-segments"></div></div><i class="signal-peak"></i><span class="signal-scale top">0</span><span class="signal-scale middle">−30</span><span class="signal-scale bottom">−60</span></div></div>
       <div class="volume-stepper"><button data-step="-1" aria-label="Lower ${esc(c.label)} volume one percent" disabled>${svg('minus')}</button><div class="volume-readout"><span>—</span><small>%</small></div><button data-step="1" aria-label="Raise ${esc(c.label)} volume one percent" disabled>${svg('plus')}</button></div>
       <button class="mute-button" aria-label="Mute ${esc(c.label)}" aria-pressed="false" disabled>${svg('volume')}<span>Mute</span></button>
@@ -155,14 +177,14 @@ function localVolume(id, value) {
 }
 function setVolume(id, value) {
   localVolume(id, value); edited.set(id, Date.now() + 1200);
-  const pending = writes.get(id) || {running:false}; pending.value = value; writes.set(id,pending);
+  const pending = writes.get(id) || {running:false}; pending.value = value; pending.command=volumeRequest(id,'volume',value); writes.set(id,pending);
   if (pending.timer) clearTimeout(pending.timer);
   if (!pending.running) pending.timer = setTimeout(() => flushVolume(id), 55);
 }
 async function flushVolume(id) {
   const pending = writes.get(id); if (!pending || pending.running || pending.value === undefined) return;
-  pending.running = true; const value = pending.value; pending.value = undefined;
-  try { state.sonar = await execute('/api/sonar', {channel:id,action:'volume',value}); }
+  pending.running = true; const command = pending.command; pending.value = undefined;
+  try { state[command.key] = await execute(command.path,command.body); }
   catch { edited.delete(id); }
   finally {
     pending.running = false;
@@ -171,8 +193,9 @@ async function flushVolume(id) {
   }
 }
 async function toggleMute(id) {
-  const channel = state.sonar?.channels?.[id]; if (!state.sonar?.connected || !channel?.available) return;
-  try { state.sonar = await execute('/api/sonar', {channel:id,action:'mute',value:!channel.muted}); update(); } catch {}
+  const channel = channelControl(id); if (!channelReady(id)) return;
+  const command=volumeRequest(id,'mute',!channel.muted);
+  try { state[command.key] = await execute(command.path,command.body); update(); } catch {}
 }
 function update() {
   const sonar = state.sonar || {}, music = state.music || {};
@@ -194,22 +217,30 @@ function update() {
   $('#sonar-mode').textContent = sonar.connected ? (sonar.mode === 'classic' ? 'CLASSIC' : 'STREAM · MONITOR MIX') : 'OFFLINE';
   $('#sonar-mode').title = sonar.message || '';
   $$('.channel').forEach(el => {
-    const id = el.dataset.channel, ch = sonar.channels?.[id];
-    const available = !!(sonar.connected && ch?.available), enabled = available && ch.enabled;
+    const id = el.dataset.channel, ch = channelControl(id);
+    const available = channelReady(id), enabled = available && ch.enabled;
+    $('.signal-meter',el).hidden=id==='master'&&systemMaster();
+    if(id==='master'&&systemMaster()){
+      const device=$('.master-device',el);
+      $('span',device).textContent=shortDeviceName(ch?.deviceName)||'No default output';device.title=ch?.deviceName||ch?.message||'Windows default output';
+    }
     if (available && !(edited.get(id) > Date.now()) && !writes.has(id)) localVolume(id, ch.volume);
     if (!available) $('.volume-readout>span',el).textContent = '—';
     $('.fader',el).disabled = !enabled;
+    const label=channelLabel(preferences.channels.find(c=>c.id===id));
+    $('.fader',el).setAttribute('aria-label',`${label} volume`);
+    $$('[data-step]',el).forEach(button=>button.setAttribute('aria-label',`${Number(button.dataset.step)>0?'Raise':'Lower'} ${label} volume one percent`));
     $$('[data-step]',el).forEach(b => b.disabled = !enabled);
     const mute = $('.mute-button',el); mute.disabled = !enabled;
     mute.setAttribute('aria-pressed',String(!!ch?.muted));
-    mute.setAttribute('aria-label',`${ch?.muted?'Unmute':'Mute'} ${preferences.channels.find(c=>c.id===id)?.label||id}`);
+    mute.setAttribute('aria-label',`${ch?.muted?'Unmute':'Mute'} ${channelLabel(preferences.channels.find(c=>c.id===id))}`);
     mute.innerHTML = svg(ch?.muted ? 'muted':'volume') + `<span>${ch?.muted ? 'Unmute':'Mute'}</span>`;
     el.classList.toggle('is-muted',!!ch?.muted); el.classList.toggle('is-disabled',available && !ch.enabled);
     const preset = $('.eq-button',el), device=$('button.device-button',el);
     if (preset) { preset.disabled = !available; preset.title = `EQ · ${ch?.preset?.name||'Choose preset'}`; }
     if (device) {
       device.disabled=!available;
-      const name=ch?.deviceName, shortName=name?.replace(/^(?:Headphones|Speakers|Headset|Microphone) \((.*)\)$/i,'$1').replace(/ \(VB-Audio[^)]*\)$/i,'');
+      const name=ch?.deviceName, shortName=shortDeviceName(name);
       $('.device-name',device).textContent=!available?'Offline':!ch.enabled?'Off in Sonar':shortName||'Choose device';
       device.title=name?`${name}${ch.deviceAvailable===false?' · Disconnected':''}`:'Choose audio device';
       device.classList.toggle('device-offline',ch?.deviceAvailable===false);
@@ -254,15 +285,16 @@ function update() {
   $('.music-volume-control').title=hasVolume?`${playerName} volume`:playerName==='MusicBee'?'Install the MusicBee helper in Customize → Music app':'This app does not report volume';
   $('#musicbee-helper').hidden=playerName!=='MusicBee'||hasVolume||!window.SONAR_EDGE_NATIVE;
   $$('.shortcut').forEach(button => {
-    const action = button.dataset.action, channel = sonar.channels?.[action];
+    const action = button.dataset.action, channel = channelControl(action);
     button.classList.toggle('active',!!channel?.muted);
-    const label=preferences.shortcutAppearance?.[action]?.label||(['mic','media','master'].includes(action)&&channel?.muted?actionNames[action].replace('Mute','Unmute'):action==='playpause'?(music.playing?'Pause music':'Play music'):actionNames[action]);
+    const defaultLabel=action==='master'&&systemMaster()?'Mute system':actionNames[action];
+    const label=preferences.shortcutAppearance?.[action]?.label||(['mic','media','master'].includes(action)&&channel?.muted?defaultLabel.replace('Mute','Unmute'):action==='playpause'?(music.playing?'Pause music':'Play music'):defaultLabel);
     $('span',button).textContent=label;
     button.title=label;button.setAttribute('aria-label',label);
     if(['mic','media','master'].includes(action))button.setAttribute('aria-pressed',String(!!channel?.muted));
     const icon=shortcutIcon(action,preferences.shortcutAppearance?.[action],music.playing,channel?.muted);
     const oldIcon=$('svg',button);if(oldIcon.dataset.name!==icon){oldIcon.outerHTML=svg(icon);$('svg',button).dataset.name=icon;}
-    button.disabled = ['musicbee','sonar'].includes(action) ? false : ['mic','media','master'].includes(action) ? !sonar.connected || !channel?.available || !channel.enabled : !music.connected || !music.controls?.[action];
+    button.disabled = ['musicbee','sonar'].includes(action) ? false : ['mic','media','master'].includes(action) ? !channelReady(action) || !channel.enabled : !music.connected || !music.controls?.[action];
   });
 }
 async function musicAction(action, value) {
@@ -324,6 +356,7 @@ document.addEventListener('keydown',e => {
   }
 });
 function collectDraft() {
+  if($('#master-volume-target'))draft.masterVolumeTarget=$('#master-volume-target').value;
   if($('#app-default'))defaultVersionDraft=$('#app-default').value;
   if($('#settings-startup'))startupDraft=$('#settings-startup').checked;
   if ($('#settings-layout')) {
@@ -365,6 +398,44 @@ function collectDraft() {
     draft.artworkEffects.blur=Number($('#effects-blur').value);
   }
 }
+async function renderDeviceSettings(){
+  const host=$('#device-visibility');
+  try{
+    const data=await get('/api/catalog');
+    if(!host?.isConnected)return;
+    const devices=data.devices||[],inUse=new Set(Object.values(state.sonar?.channels||{}).map(ch=>ch.deviceId));
+    host.innerHTML=`<div class="device-list-toolbar"><input id="device-visibility-search" type="search" placeholder="Find an input or output…" aria-label="Search device visibility lists"><button class="button secondary" id="refresh-device-lists">Refresh</button><button class="button secondary" id="reset-device-lists">Reset lists</button></div><div class="device-visibility-columns">${[['render','Outputs'],['capture','Inputs']].map(([flow,label])=>`<section class="device-visibility-column" data-flow="${flow}" aria-label="${label}"><div class="device-list-heading"><h3>${label}</h3><span class="device-list-count" aria-live="polite"></span><div class="device-list-bulk"><button class="button secondary" data-show-devices="true">Show all</button><button class="button secondary" data-show-devices="false">Hide all</button></div></div><div class="device-visibility-list"></div></section>`).join('')}</div>`;
+    const refreshCounts=()=>{
+      $$('.device-visibility-column',host).forEach(column=>{
+        const flow=column.dataset.flow,all=devices.filter(d=>d.dataFlow===flow),hidden=new Set(draft.hiddenDevices?.[flow]||[]);
+        $('.device-list-count',column).textContent=`${all.filter(d=>!hidden.has(d.id)).length} of ${all.length} shown`;
+      });
+    };
+    const render=()=>{
+      const query=$('#device-visibility-search').value;
+      $$('.device-visibility-column',host).forEach(column=>{
+        const flow=column.dataset.flow,hidden=new Set(draft.hiddenDevices?.[flow]||[]);
+        const matches=listedDevices(devices,flow,[],[],query,true);
+        $('.device-visibility-list',column).innerHTML=matches.map(d=>`<label class="device-visibility-row${hidden.has(d.id)?' is-hidden':''}"><input type="checkbox" data-visible-device="${esc(d.id)}"${hidden.has(d.id)?'':' checked'} aria-label="Show ${esc(d.friendlyName)}">${svg(flow==='capture'?'mic':'headphones')}<span>${esc(d.friendlyName||'Unnamed device')}</span>${inUse.has(d.id)?'<small>IN USE</small>':''}</label>`).join('')||`<p class="settings-help">${query.trim()?'No matching devices.':'No available devices.'}</p>`;
+        $$('[data-show-devices]',column).forEach(button=>{button.textContent=`${button.dataset.showDevices==='true'?'Show':'Hide'} ${query.trim()?'matches':'all'}`;button.disabled=!matches.length;});
+        $$('[data-visible-device]',column).forEach(input=>input.addEventListener('change',()=>{
+          setDeviceVisible(draft,flow,input.dataset.visibleDevice,input.checked);
+          input.closest('label').classList.toggle('is-hidden',!input.checked);refreshCounts();
+        }));
+      });
+      refreshCounts();
+    };
+    $('#device-visibility-search').addEventListener('input',render);
+    $$('[data-show-devices]',host).forEach(button=>button.addEventListener('click',()=>{
+      const flow=button.closest('[data-flow]').dataset.flow;
+      listedDevices(devices,flow,[],[],$('#device-visibility-search').value,true).forEach(d=>setDeviceVisible(draft,flow,d.id,button.dataset.showDevices==='true'));
+      render();
+    }));
+    $('#reset-device-lists').addEventListener('click',()=>{draft.hiddenDevices={render:[],capture:[]};render();});
+    $('#refresh-device-lists').addEventListener('click',()=>{collectDraft();renderDeviceSettings();});
+    render();
+  }catch(error){if(host?.isConnected){host.innerHTML=`<p class="settings-help" role="status">${esc(error.message)}. Open GG and enable Sonar to list devices.</p><button class="button secondary" id="retry-device-lists">Retry</button>`;$('#retry-device-lists').addEventListener('click',renderDeviceSettings);}}
+}
 async function renderBrightnessSettings(){
   const host=$('#brightness-settings');
   try{
@@ -400,6 +471,7 @@ function settingsContent() {
   const color=(label,id,value)=>`<label class="color-field">${label}<input type="color" id="${id}" value="${value}"></label>`;
   const range=(label,id,value,min,max,step,display)=>`<label class="field range-field"><span class="range-label">${label}<output>${display}</output></span><input type="range" id="${id}" min="${min}" max="${max}" step="${step}" value="${value}"></label>`;
   let content='';
+  if(settingsTab==='devices')content=`<p class="settings-help device-visibility-help">Check the devices you want in the pickers. Your connected device stays available.</p><div id="device-visibility"><p class="settings-help">Loading audio devices…</p></div>`;
   if(settingsTab==='window')content=`<div class="settings-grid ${window.SONAR_EDGE_NATIVE?'two-columns':'display-only'}"><div class="settings-column" id="brightness-settings">Reading display brightness…</div>${window.SONAR_EDGE_NATIVE?'<div class="settings-column" id="window-settings">Loading window settings…</div>':''}</div>`;
   if(settingsTab==='updates'){
     const u=updateInfo,busy=['checking','downloading','installing'].includes(u?.status);
@@ -438,9 +510,11 @@ function settingsContent() {
   }
   if (settingsTab==='channels') content=`<div class="settings-grid two-columns"><div class="settings-column"><h3>Channels</h3>
     ${draft.channels.map((c,i)=>`<div class="channel-setting-row" data-id="${c.id}"><input type="checkbox" aria-label="Show ${esc(c.label)}"${c.visible?' checked':''}><input type="text" aria-label="${c.id} channel label" maxlength="24" value="${esc(c.label)}"><input type="color" aria-label="${c.id} channel color" value="${c.color}"><button class="icon-button quiet" data-move="-1" data-id="${c.id}" aria-label="Move ${esc(c.label)} left"${i===0?' disabled':''}>${svg('up')}</button><button class="icon-button quiet" data-move="1" data-id="${c.id}" aria-label="Move ${esc(c.label)} right"${i===draft.channels.length-1?' disabled':''}>${svg('down')}</button></div>`).join('')}</div>
-    <div class="settings-column"><h3>Channel layout</h3><label class="check"><input type="checkbox" id="settings-meters"${draft.showMeters?' checked':''}>Live audio meters</label><label class="check"><input type="checkbox" id="settings-chatmix"${draft.showChatMix?' checked':''}>ChatMix control</label><p class="settings-help">Meters show live channel activity before Sonar volume. Master summarizes output activity.</p><p class="settings-help">Choose which channels appear, rename them, change their colors, and move them with the arrows.</p></div></div>`;
+    <div class="settings-column"><h3>Main volume</h3>${field('Main volume fader controls','master-volume-target',[['windows','Windows default output'],['sonar','Sonar master mix']],draft.masterVolumeTarget||'sonar')}<p class="settings-help">Windows mode follows your default playback device and keyboard volume. If that device is Sonar Gaming, it controls Game.</p><h3>Channel layout</h3><label class="check"><input type="checkbox" id="settings-meters"${draft.showMeters?' checked':''}>Live audio meters</label><label class="check"><input type="checkbox" id="settings-chatmix"${draft.showChatMix?' checked':''}>ChatMix control</label><p class="settings-help">Choose which channels appear, rename them, change their colors, and move them with the arrows.</p></div></div>`;
   if(settingsTab==='actions')content=`<label class="check actions-label-toggle"><input type="checkbox" id="shortcut-labels"${draft.shortcutLabels?' checked':''}>Show button labels</label><div class="action-column-headings"><span>Action</span><span>Button label</span><span>Icon</span><span>Order</span></div><div class="action-setting-list">${draft.shortcuts.map((action,i)=>`<div class="action-setting-row" data-index="${i}"><select class="shortcut-select" aria-label="Action ${i+1}">${options(Object.entries(actionNames),action)}</select><input class="action-label" type="text" maxlength="24" value="${esc(draft.shortcutAppearance?.[action]?.label||'')}" placeholder="${actionNames[action]}" aria-label="Button ${i+1} label"><select class="action-icon" aria-label="Button ${i+1} icon">${options(Object.entries(editableIcons),draft.shortcutAppearance?.[action]?.icon||actionIcons[action])}</select><div class="action-order"><button class="icon-button quiet" data-action-move="-1" aria-label="Move action ${i+1} left"${i===0?' disabled':''}>${svg('up')}</button><button class="icon-button quiet" data-action-move="1" aria-label="Move action ${i+1} right"${i===draft.shortcuts.length-1?' disabled':''}>${svg('down')}</button><button class="icon-button quiet" data-action-remove aria-label="Remove action ${i+1}">${svg('close')}</button></div></div>`).join('')}</div><button class="button secondary" id="add-action"${draft.shortcuts.length>=8?' disabled':''}>${svg('plus')}Add action</button>`;
-  $('#sheet-content').innerHTML=`<nav class="settings-tabs" aria-label="Settings categories">${[['layout','Layout & player'],['appearance','Appearance'],['effects','Artwork effects'],['background','Background'],['channels','Mixer channels'],['actions','Bottom buttons'],['version','App version'],['window',window.SONAR_EDGE_NATIVE?'Window & display':'Display'],['updates','Updates']].map(([id,label])=>`<button class="settings-tab${id===settingsTab?' active':''}" data-settings-tab="${id}" aria-current="${id===settingsTab?'page':'false'}">${label}</button>`).join('')}</nav><div class="settings-body">${content}</div><div class="settings-actions"><button class="button secondary" id="cancel-settings">Cancel</button><button class="button primary" id="save-settings">Save changes</button></div>`;
+  $('#sheet-content').innerHTML=`<nav class="settings-tabs" aria-label="Settings categories">${[['layout','Layout & player'],['appearance','Appearance'],['effects','Artwork effects'],['background','Background'],['channels','Mixer channels'],['devices','Audio devices'],['actions','Bottom buttons'],['version','App version'],['window',window.SONAR_EDGE_NATIVE?'Window & display':'Display'],['updates','Updates']].map(([id,label])=>`<button class="settings-tab${id===settingsTab?' active':''}" data-settings-tab="${id}" aria-current="${id===settingsTab?'page':'false'}">${label}</button>`).join('')}</nav><div class="settings-body${settingsTab==='devices'?' device-settings-body':''}">${content}</div><div class="settings-actions"><button class="button secondary" id="cancel-settings">Cancel</button><button class="button primary" id="save-settings">Save changes</button></div>`;
+  if(settingsTab==='devices')renderDeviceSettings();
+  $('.settings-tab.active')?.scrollIntoView({block:'nearest'});
   if(settingsTab==='window')renderBrightnessSettings();
   if(settingsTab==='window'&&window.SONAR_EDGE_NATIVE)renderWindowSettings();
   $$('[data-open-version]').forEach(button=>button.addEventListener('click',async()=>{
@@ -491,7 +565,7 @@ function settingsContent() {
   $$('[data-panel]').forEach(button=>button.addEventListener('click',()=>{collectDraft();draft.appearance.panelColor=button.dataset.panel;draft.accent=button.dataset.accent;settingsContent();}));
   if ($('#refresh-players')) $('#refresh-players').addEventListener('click',async()=>{collectDraft();try{playerOptions=await get('/api/players');settingsContent();}catch(e){toast(e.message);}});
   if ($('#export-settings')) $('#export-settings').addEventListener('click',async()=>{collectDraft();if(window.SONAR_EDGE_NATIVE){try{await nativeApi('export_settings',draft);}catch(e){toast(e.message);}return;}const blob=new Blob([JSON.stringify(draft,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='sonar-edge-settings.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
-  if ($('#import-settings')) $('#import-settings').addEventListener('change',async e=>{try{const file=e.target.files[0];if(!file)return;if(file.size>16000)throw Error('Choose an Edge Audio settings file');const data=JSON.parse(await file.text());draft=await execute('/api/validate-preferences',data);settingsContent();}catch(err){toast(err.message);}});
+  if ($('#import-settings')) $('#import-settings').addEventListener('change',async e=>{try{const file=e.target.files[0];if(!file)return;if(file.size>256*1024)throw Error('Choose a Sonar Edge settings file smaller than 256 KB');const data=JSON.parse(await file.text());draft=await execute('/api/validate-preferences',data);settingsContent();}catch(err){toast(err.message);}});
   if ($('#background-file')) $('#background-file').addEventListener('change',async e=>{
     const file=e.target.files[0];if(!file)return;collectDraft();
     if(file.size>64*1024*1024)return toast('Choose a background smaller than 64 MB.');
@@ -527,7 +601,7 @@ async function refreshUpdates(){
 async function openSettings(tab='layout') {
   if (!preferences) return toast('The local helper is connecting. Try again in a moment.');
   try{const info=await get('/api/app');if(info)appVersionInfo=info;}catch{}
-  draft = copy(preferences);defaultVersionDraft=appVersionInfo?.default||'desktop';startupDraft=!!appVersionInfo?.startup?.enabled;settingsTab=tab;openSheet('Settings','SONAR EDGE');settingsContent();
+  sheetChannel=null;draft = copy(preferences);defaultVersionDraft=appVersionInfo?.default||'desktop';startupDraft=!!appVersionInfo?.startup?.enabled;settingsTab=tab;openSheet('Settings','SONAR EDGE');settingsContent();
   get('/api/players').then(data=>{playerOptions=data;if(!$('#overlay').hidden&&$('#settings-player')){collectDraft();settingsContent();}}).catch(()=>{});
 }
 $('#customize').addEventListener('click',()=>openSettings());
@@ -554,13 +628,16 @@ async function channelSheet(id, section='eq') {
     const canRoute = ch.canRoute;
     if(section==='device'){
       let selected=devices.some(d=>d.id===ch.deviceId)?ch.deviceId:null;
-      $('#sheet-content').innerHTML=`<div class="output-info">Connected to <strong>${esc(ch.deviceName||selectedDevice?.friendlyName||'No device selected')}${ch.deviceAvailable===false?' · Disconnected':''}</strong></div><input type="search" class="preset-filter" placeholder="Find a device…" aria-label="Search audio devices"><div class="device-picker-list"></div><div class="device-picker-footer">${canRoute?'':'<p class="settings-help">Per-channel outputs require Sonar Classic mode.</p>'}<button class="button secondary" data-open-gg>Open Sonar</button><button class="button primary" id="apply-device" disabled>Apply device</button></div>`;
+      const hidden=preferences.hiddenDevices?.[flow]||[];
+      $('#sheet-content').innerHTML=`<div class="output-info">Connected to <strong>${esc(ch.deviceName||selectedDevice?.friendlyName||'No device selected')}${ch.deviceAvailable===false?' · Disconnected':''}</strong></div><div class="device-picker-tools"><input type="search" class="preset-filter" placeholder="Find a device…" aria-label="Search audio devices"><label class="check"><input type="checkbox" id="show-hidden-devices">Show hidden (${devices.filter(d=>hidden.includes(d.id)).length})</label></div><div class="device-picker-list"></div><div class="device-picker-footer"><button class="button secondary" id="manage-device-list">${svg('gear')}Edit device lists</button>${canRoute?'':'<p class="settings-help">Per-channel outputs require Sonar Classic mode.</p>'}<button class="button secondary" data-open-gg>Open Sonar</button><button class="button primary" id="apply-device" disabled>Apply device</button></div>`;
       const renderDevices=()=>{
-        const query=$('.preset-filter').value.toLowerCase();
-        $('.device-picker-list').innerHTML=devices.filter(d=>d.friendlyName.toLowerCase().includes(query)).map(d=>`<button class="device-choice${d.id===selected?' selected':''}" data-device="${esc(d.id)}"${canRoute?'':' disabled'}>${svg(id==='mic'?'mic':'headphones')}<span>${esc(d.friendlyName)}</span>${d.id===ch.deviceId?'<small>CONNECTED</small>':''}</button>`).join('')||'<p class="settings-help">No available devices match.</p>';
+        const query=$('.preset-filter').value;
+        $('.device-picker-list').innerHTML=listedDevices(devices,flow,hidden,[ch.deviceId,selected],query,$('#show-hidden-devices').checked).map(d=>`<button class="device-choice${d.id===selected?' selected':''}" data-device="${esc(d.id)}"${canRoute?'':' disabled'}>${svg(id==='mic'?'mic':'headphones')}<span>${esc(d.friendlyName||'Unnamed device')}</span>${d.id===ch.deviceId?'<small>CONNECTED</small>':''}</button>`).join('')||'<p class="settings-help">No devices match. Show hidden devices or edit your lists.</p>';
         $$('[data-device]').forEach(b=>b.addEventListener('click',()=>{selected=b.dataset.device;renderDevices();$('#apply-device').disabled=selected===ch.deviceId;}));
       };
       renderDevices();$('.preset-filter').addEventListener('input',renderDevices);
+      $('#show-hidden-devices').addEventListener('change',renderDevices);
+      $('#manage-device-list').addEventListener('click',()=>openSettings('devices'));
       $('[data-open-gg]').addEventListener('click',()=>execute('/api/launch',{app:'sonar'}).catch(()=>{}));
       $('#apply-device').addEventListener('click',async()=>{const btn=$('#apply-device');btn.disabled=true;try{state.sonar=await execute('/api/sonar',{channel:id,action:'device',value:selected});update();closeSheet();toast('Sonar device updated.');}catch{}finally{btn.disabled=selected===ch.deviceId;}});
       return;
@@ -585,7 +662,7 @@ async function poll() {
     const latest=await get('/api/state'); disconnected=false;
     if(latest.preferences&&JSON.stringify(latest.preferences)!==JSON.stringify(preferences)) {preferences=latest.preferences;applyPreferences();}
     // Do not let an older poll response replace a just-completed command.
-    for (const key of ['sonar','music']) {
+    for (const key of ['sonar','music','systemVolume']) {
       if (!latest[key]?.updated || !state[key]?.updated || latest[key].updated >= state[key].updated) state[key]=latest[key];
       if (state[key]?.updated && Date.now()/1000-state[key].updated>12) state[key]={connected:false};
     }

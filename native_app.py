@@ -187,7 +187,7 @@ class NativeAPI:
                 if path not in ('/api/catalog', '/api/players'):
                     raise ValueError('Unknown desktop operation')
             elif method == 'POST':
-                if path not in ('/api/sonar', '/api/music', '/api/preferences', '/api/validate-preferences', '/api/launch', '/api/app', '/api/update', '/api/display'):
+                if path not in ('/api/sonar', '/api/music', '/api/preferences', '/api/validate-preferences', '/api/launch', '/api/app', '/api/update', '/api/display', '/api/system-volume'):
                     raise ValueError('Unknown desktop operation')
             else:
                 raise ValueError('Unknown desktop operation')
@@ -242,7 +242,7 @@ class NativeAPI:
             if not paths:
                 return None
             path = Path(paths[0])
-            if path.stat().st_size > 16000:
+            if path.stat().st_size > 256*1024:
                 raise ValueError('Choose a Sonar Edge settings file')
             return core.validate_preferences(json.loads(path.read_text('utf-8-sig')))
         return self._result(load)

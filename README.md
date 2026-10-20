@@ -13,6 +13,7 @@ Choose Desktop or iCUE in **Settings → App version**. Import the included
 `Sonar Edge XL.icuewidget` in iCUE and choose XL to fill its dashboard area.
 
 - Sonar channel volumes, mute, devices, EQ presets, live activity meters, and ChatMix
+- Searchable input/output visibility lists and a main fader that can follow Windows' default output
 - MusicBee controls, artwork, progress, seeking, and player volume with the included helper
 - Other music apps through Windows media controls
 - Custom backgrounds, album colors, optional animated blur, readable text, and configurable buttons
@@ -25,6 +26,12 @@ is required for the widget view. Sonar Edge automatically reconnects as those
 apps become available. One running app and one tray icon serve both views, with no address entry
 or external hosting. Minimize or close the window to keep iCUE working;
 choose Exit Sonar Edge from the tray to quit. The bottom gear opens Settings.
+In **Settings → Audio devices**, check the inputs and outputs you want in device
+pickers. Hidden devices stay available through **Show hidden**, and your current
+device remains accessible. In **Settings → Mixer channels**, choose
+**Windows default output** for the main fader
+to follow system/keyboard volume, or **Sonar master mix** for Sonar's mixer master.
+When Windows uses Sonar Gaming as its default output, system volume changes Game.
 Start with Windows uses the standard per-user Startup Apps entry and starts the
 installed EXE directly. No scheduled task, administrator access or PowerShell is
 needed. Windows controls launch timing and may delay startup while signing in.
